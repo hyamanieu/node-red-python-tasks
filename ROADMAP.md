@@ -52,13 +52,18 @@ testing**, everything (including Node-RED) runs in containers as established in 
 
 - `python-env` configuration node: define an environment by path to an existing `pixi.toml`, resolve
   and install it, report status in the editor.
-- `python-function` node: reference an environment and a Python callable (`module:function`), send
-  `msg.payload` in, get the return value out.
-- Persistent worker process per environment, so start-up and imports are paid once.
-- Structured request/response protocol with correlation IDs, so concurrent in-flight messages cannot
-  be confused with one another.
-- Python exceptions become Node-RED errors catchable with a `catch` node, carrying exception type,
-  message and traceback.
+- `python-function` node: references an environment and stores a Python function body as text; executed
+  via a persistent worker process per environment using a JSON-lines protocol for low latency. The
+  worker is a synchronous, single-threaded loop — one request from a given environment is fully
+  processed before the next begins.
+- `python-run` node: references an environment and stores a command name (and optionally fixed arguments);
+  executed as one process per invocation via `pixi run -e <environment> -x <command> [args...]`.
+  Payload passed via stdin or argv, result captured from stdout. Non-zero exit status mapped to a
+  catchable Node-RED error.
+- Persistent worker process per environment for `python-function`, so start-up and imports are paid once.
+- Structured request/response protocol with correlation IDs for `python-function`.
+- Python exceptions (`python-function`) and non-zero exit codes (`python-run`) become Node-RED errors
+  catchable with a `catch` node.
 - Worker supervision: restart on crash, backoff, clear node status.
 - Test suite with `node-red-node-test-helper`, and CI.
 
@@ -73,10 +78,9 @@ Driven by whatever Phase 1 users complain about first. Candidates, in rough prio
 
 - **Declare dependencies in the node** and generate the environment definition automatically. This
   is the change that makes the package usable without knowing what pixi is, so it ranks high.
-- Inline Python source as an alternative to `module:function` for short functions, with a clear
-  steer towards file-backed code for anything maintainable.
 - Optional input/output schemas, validated at the boundary and surfaced in the editor.
-- Multiple worker processes per environment for CPU-bound parallelism.
+- Multiple worker processes per environment for CPU-bound parallelism (resolves the MVP's
+  concurrency limitation where one worker processes requests strictly sequentially).
 - Streaming and generator support: one input message producing many output messages.
 - Efficient handling of non-JSON payloads (arrays, dataframes, bytes) without a JSON round-trip.
 

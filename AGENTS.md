@@ -31,7 +31,7 @@ For direct local testing (outside containers):
   not a project-specific rule.
 - Package name: scoped, per Node-RED's post-2022 naming rules
   (e.g. `@scope/node-red-python-run`), not the older unscoped
-  `node-red-contrib-*` pattern.
+  `node-red-*` pattern.
 - Importable example flows live in an `examples/` directory at the package
   **root** (Node-RED requires this location), one JSON file per flow.
 - Match surrounding code style; do not reformat files you are not otherwise

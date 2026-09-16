@@ -1,6 +1,6 @@
 # Roadmap
 
-Where `node-red-contrib-python-tasks` is going, and — just as importantly — what it is deliberately
+Where `node-red-python-tasks` is going, and — just as importantly — what it is deliberately
 not doing yet. Written for humans evaluating the project and for coding agents that need context
 beyond the task in front of them.
 

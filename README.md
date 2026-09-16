@@ -1,4 +1,4 @@
-# node-red-contrib-python-tasks
+# node-red-python-tasks
 
 **Call Python from your Node-RED flows — on this machine, in a container, or on a cloud GPU —
 without changing the flow.**
@@ -91,8 +91,8 @@ Cloud execution is planned via [SkyPilot](https://skypilot.readthedocs.io/).
 
 ## Related work
 
-Several existing packages run Python from Node-RED — `node-red-contrib-pythonshell`,
-`node-red-contrib-python-venv`, `node-red-contrib-python-function` and others. The better ones
+Several existing packages run Python from Node-RED — `node-red-pythonshell`,
+`node-red-python-venv`, `node-red-python-function` and others. The better ones
 already keep a worker process alive. They rely on `venv`/`pip`, so environments are only as
 reproducible as the host they land on, and none offer a path to running the same function on other
 hardware. If those packages already meet your needs, use them — they are mature and this one is not,
@@ -104,7 +104,7 @@ Not yet publishable. Once released:
 
 ```bash
 cd ~/.node-red
-npm install node-red-contrib-python-tasks
+npm install node-red-python-tasks
 ```
 
 [pixi](https://pixi.sh/latest/#installation) must be available on the host (or inside the container

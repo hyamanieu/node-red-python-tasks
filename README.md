@@ -119,6 +119,20 @@ npm install node-red-python-tasks
 [pixi](https://pixi.sh/latest/#installation) must be available on the host (or inside the container
 running Node-RED). It is a single static binary with no dependencies of its own.
 
+## Developer setup
+
+This project uses Docker Compose for development. No local Node-RED or pixi installation is required.
+
+1. Clone this repository
+2. Run `docker compose up -d`
+3. Open http://localhost:1880 in your browser
+
+The package is installed in development mode. Changes to files in `nodes/`, `lib/`,
+`python/` will be picked up on Node-RED restart (currently requires manual restart
+via the menu or `docker compose restart node-red`).
+
+To stop: `docker compose down`.
+
 ## Examples
 
 End-to-end examples — a full industrial stack with ingestion, storage and dashboards — live in a

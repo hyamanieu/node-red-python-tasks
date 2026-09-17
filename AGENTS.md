@@ -5,7 +5,37 @@
 **Note:** For development and testing (Phase 1 and beyond), everything runs in containers. See Phase 0
 in [ROADMAP.md](./ROADMAP.md) for the containerised development environment setup.
 
-<fill-out once Phase 0 is done>
+For development, use the following commands:
+
+```bash
+# Start the development environment
+docker compose up -d
+
+# View logs
+docker compose logs -f node-red
+
+# Execute commands in the running container
+docker compose exec node-red bash
+
+# Verify pixi is available
+docker compose exec node-red pixi --version
+
+# Stop the development environment
+docker compose down
+```
+
+The `compose.yml` file uses a custom Docker image (built from `Dockerfile`) that includes:
+- Node-RED 4.1.15 with Node.js 22
+- pixi v0.81.0 installed at `/usr/src/node-red/.pixi`
+- The `node-red-python-tasks` package installed in development mode
+- The repository mounted as a volume at `/data/node-red-node-red-python-tasks` for live code changes
+
+Changes to files in `nodes/`, `lib/`, or `python/` will be visible in the container immediately.
+To pick up changes, restart Node-RED via the editor menu or run:
+
+```bash
+docker compose restart node-red
+```
 
 ## Code style
 

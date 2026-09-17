@@ -1,0 +1,16 @@
+services:
+  node-red:
+    build: .
+    container_name: node-red-dev
+    ports:
+      - "1880:1880"
+    volumes:
+      # Persist Node-RED flows and node_modules for faster restarts
+      - node-red-data:/data
+      # Mount the repository into the container
+      - ./:/data/node-red-node-red-python-tasks
+    environment:
+      - NODE_RED_ENABLE_SAFE_MODE=false
+
+volumes:
+  node-red-data:

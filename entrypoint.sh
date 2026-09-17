@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Set HOME to /data so Node-RED uses /data as its user directory
+export HOME=/data
+
+# Create symlink from node_modules to our package directory
+# The package directory is mounted from the host at /data/node-red-node-red-python-tasks
+if [ ! -L /data/node_modules/node-red-python-tasks ]; then
+    mkdir -p /data/node_modules
+    ln -sf /data/node-red-node-red-python-tasks /data/node_modules/node-red-python-tasks
+fi
+
+# Start Node-RED with the correct user directory
+# This matches the original Node-RED Docker image entrypoint
+exec /usr/local/bin/node $NODE_OPTIONS /usr/src/node-red/node_modules/node-red/red.js --userDir /data $FLOWS "${@}"

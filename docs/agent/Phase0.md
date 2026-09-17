@@ -39,7 +39,7 @@ instance with the package's nodes available in the palette, ready for implementa
 
 ### Docker setup
 
-- A `compose.yml` (and `compose.dev.yml`) at the repository root
+- A `compose.yml` at the repository root
 - Uses official Node-RED Docker image with a fixed version yet latest node 22 (nodered/node-red:4.1.15-22). No `latest` even if provided in the example below.
 - Fix pixi home, and version, an don't add to path: `wget -qO- https://pixi.sh/install.sh | PIXI_HOME=/usr/src/node-red/.pixi PIXI_VERSION=/v0.81.0 PIXI_NO_PATH_UPDATE=1 sh`
 - Pixi should be added as a preinstall script in package.json so that the default "phase 1" setup works out of the box both in production and in dev environement
@@ -73,9 +73,8 @@ Create these files. Files marked `(exists)` are already present.
 ├── AGENTS.md                  (exists)
 ├── README.md                  (exists)  ← add Developer setup section
 ├── ROADMAP.md                 (exists)
-├── compose.yml                new: Docker Compose configuration for defautl Node-RED
-├── compose.dev.yml            new: configuration with current package
-├── Dockerfile                 new: used by compose.dev.yml with package preinstalled
+├── compose.yml                new: Docker Compose configuration
+├── Dockerfile                 new: used by compose.yml with package preinstalled
 └── docs/
     └── agent/
         ├── Phase0.md          (this file)

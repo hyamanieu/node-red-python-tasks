@@ -1,0 +1,33 @@
+<script type="text/javascript">
+RED.nodes.registerType('python-function',{
+    category: 'python',
+    color: '#999999',
+    defaults: {
+        name: {value: ''},
+        env: {type: 'python-env'},
+        func: {value: ''}
+    },
+    inputs: 1,
+    outputs: 1,
+    icon: "python.png",
+    label: function() {
+        return this.name || "python-function";
+    },
+    oneditprepare: function() {
+        // Phase 0: stub editor UI
+    }
+});
+</script>
+
+<div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+</div>
+<div class="form-row">
+    <label for="node-input-env"><i class="fa fa-cog"></i> Python Environment</label>
+    <input type="text" id="node-input-env">
+</div>
+<div class="form-row">
+    <label for="node-input-func"><i class="fa fa-code"></i> Function</label>
+    <textarea type="text" id="node-input-func" placeholder="def my_function(msg):\n    return msg"></textarea>
+</div>

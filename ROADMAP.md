@@ -31,7 +31,7 @@ environments are how that is achieved, not what is being sold. Concretely:
 - Conversely, a user who already maintains a `pixi.toml` must be able to point at it and have it
   used as-is. Power users are not forced through a simplified abstraction.
 
-## Phase 0 — Development environment
+## Phase 0 — Development environment ✅
 
 **Goal:** a reproducible containerised development environment so work on Phase 1 can begin.
 

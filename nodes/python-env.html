@@ -1,0 +1,23 @@
+<script type="text/javascript">
+RED.nodes.registerType('python-env',{
+    category: 'python',
+    color: '#999999',
+    defaults: {
+        name: {value: ''}
+    },
+    inputs: 0,
+    outputs: 0,
+    icon: "python.png",
+    label: function() {
+        return this.name || "python-env";
+    },
+    oneditprepare: function() {
+        // Phase 0: stub editor UI
+    }
+});
+</script>
+
+<div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+</div>

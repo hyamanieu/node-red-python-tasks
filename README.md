@@ -48,7 +48,7 @@ Same node, same wiring, same Python function. Only the environment's configurati
 **The contract is data, not text.** Values are converted at the boundary. You are not serialising
 to a command line and parsing stdout by hand.
 
-## Two nodes
+## Three nodes
 
 - **`python-env`** (configuration node) — describes a Python environment: which packages it needs,
   and where it runs. Owned once, referenced by many nodes.

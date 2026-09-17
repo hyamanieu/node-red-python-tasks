@@ -2,18 +2,10 @@
 
 ## Setup commands
 
-**Note:** For development and testing (Phase 0 and beyond), everything runs in containers. See Phase 0
+**Note:** For development and testing (Phase 1 and beyond), everything runs in containers. See Phase 0
 in [ROADMAP.md](./ROADMAP.md) for the containerised development environment setup.
 
-For direct local testing (outside containers):
-- Install Node-RED for local testing: `npm install -g --unsafe-perm node-red`
-- Link this package into a local Node-RED user directory to test changes live:
-  `cd ~/.node-red && npm install <path-to-this-repo>` — this symlinks the package in;
-  restart Node-RED after each change to the `.js`/`.html` files to pick them up.
-- Resolve the Python worker's environment: `pixi install` (run inside the fixture
-  project under `test/fixtures/pixi-project`, or the user's own project directory).
-- Run the test suite: `npm test`
-- Start Node-RED against the local install: `node-red`, then open `http://localhost:1880`.
+<fill-out once Phase 0 is done>
 
 ## Code style
 

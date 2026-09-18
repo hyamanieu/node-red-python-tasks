@@ -11,11 +11,17 @@ RED.nodes.registerType('python-function',{
     },
     inputs: 1,
     outputs: 1,
-    icon: "python.png",
+    icon: "font-awesome/fa-code",
     label: function() {
         return this.name || "Python Function";
     },
     oneditprepare: function() {
+        // Configure env as a config node selector
+        $('#node-input-env').typedInput({
+            type: 'python-env',
+            types: ['python-env']
+        });
+        
         // Configure timeout as number
         $('#node-input-timeout').typedInput({
             type: 'num',

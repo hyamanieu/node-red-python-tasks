@@ -47,13 +47,13 @@ docker compose logs -f node-red
 
 ```bash
 # First, install devDependencies in the container
-docker compose exec node-red npm install --no-save
+docker compose exec node-red npm install
 
 # Then run tests
 docker compose exec node-red npm test
 
 # Or run specific test files
-docker compose exec node-red ./node_modules/.bin/mocha test/lib/protocol_spec.js
+docker compose exec node-red npx mocha test/lib/protocol_spec.js
 ```
 
 ### Code Organization

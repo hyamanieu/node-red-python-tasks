@@ -3,6 +3,12 @@
 # Set HOME to /data so Node-RED uses /data as its user directory
 export HOME=/data
 
+# Install devDependencies for testing (they need to be in the mounted volume)
+cd /data/node-red-node-red-python-tasks
+if [ ! -d "node_modules" ]; then
+    npm install --include=dev
+fi
+
 # Create symlink from node_modules to our package directory
 # The package directory is mounted from the host at /data/node-red-node-red-python-tasks
 if [ ! -L /data/node_modules/node-red-python-tasks ]; then

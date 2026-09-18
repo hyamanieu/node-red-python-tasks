@@ -19,7 +19,7 @@ ENV PIXI_HOME=/usr/src/node-red/.pixi
 
 # Install pixi via npm preinstall script
 WORKDIR /data/node-red-node-red-python-tasks
-RUN npm install --no-save --ignore-scripts
+RUN npm install --include=dev
 
 # Add pixi to PATH
 ENV PATH="$PIXI_HOME/bin:$PATH"

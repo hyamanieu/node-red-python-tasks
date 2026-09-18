@@ -31,30 +31,32 @@ RED.nodes.registerType('python-function',{
 });
 </script>
 
-<div class="form-row">
-    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
-    <input type="text" id="node-input-name" placeholder="Name">
-</div>
-<div class="form-row">
-    <label for="node-input-env"><i class="fa fa-cog"></i> Python Environment</label>
-    <input type="text" id="node-input-env">
-    <div class="form-tip">Select a configured Python environment</div>
-</div>
-<div class="form-row">
-    <label for="node-input-functionBody"><i class="fa fa-code"></i> Function Body</label>
-    <textarea type="text" id="node-input-functionBody" placeholder="return payload * 2" rows="10"></textarea>
-    <div class="form-tip">Python code that processes the msg.payload. Use 'payload' as the input variable. Do not include 'def' or 'return' statements.</div>
-</div>
-<div class="form-row">
-    <label for="node-input-imports"><i class="fa fa-book"></i> Pre-imported Modules</label>
-    <input type="text" id="node-input-imports" placeholder="numpy, pandas">
-    <div class="form-tip">Comma-separated list of modules to import before executing the function (e.g., numpy,pandas)</div>
-</div>
-<div class="form-row">
-    <label for="node-input-timeout"><i class="fa fa-clock-o"></i> Timeout (ms)</label>
-    <input type="text" id="node-input-timeout" placeholder="30000">
-    <div class="form-tip">Per-call timeout in milliseconds. Set to 0 to disable timeout.</div>
-</div>
+<script type="text/html" data-template-name="python-function">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-env"><i class="fa fa-cog"></i> Python Environment</label>
+        <input type="text" id="node-input-env">
+        <div class="form-tip">Select a configured Python environment</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-functionBody"><i class="fa fa-code"></i> Function Body</label>
+        <textarea type="text" id="node-input-functionBody" placeholder="return payload * 2" rows="10"></textarea>
+        <div class="form-tip">Python code that processes the msg.payload. Use 'payload' as the input variable. Do not include 'def' or 'return' statements.</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-imports"><i class="fa fa-book"></i> Pre-imported Modules</label>
+        <input type="text" id="node-input-imports" placeholder="numpy, pandas">
+        <div class="form-tip">Comma-separated list of modules to import before executing the function (e.g., numpy,pandas)</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-timeout"><i class="fa fa-clock-o"></i> Timeout (ms)</label>
+        <input type="text" id="node-input-timeout" placeholder="30000">
+        <div class="form-tip">Per-call timeout in milliseconds. Set to 0 to disable timeout.</div>
+    </div>
+</script>
 
 <script type="text/html" data-help-name="python-function">
     <p>Executes a Python function for each input message using a persistent worker process.</p>

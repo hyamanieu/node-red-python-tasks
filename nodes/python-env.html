@@ -24,25 +24,27 @@ RED.nodes.registerType('python-env',{
 });
 </script>
 
-<div class="form-row">
-    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
-    <input type="text" id="node-input-name" placeholder="Name">
-</div>
-<div class="form-row">
-    <label for="node-input-projectDir"><i class="fa fa-folder"></i> Project Directory</label>
-    <input type="text" id="node-input-projectDir" placeholder="/path/to/pixi/project">
-    <div class="form-tip">Directory containing a pixi.toml file that defines the Python environment</div>
-</div>
-<div class="form-row">
-    <label for="node-input-environment"><i class="fa fa-cog"></i> Environment</label>
-    <input type="text" id="node-input-environment" placeholder="default">
-    <div class="form-tip">Name of the pixi environment to use (default: default)</div>
-</div>
-<div class="form-row">
-    <label for="node-input-startupTimeout"><i class="fa fa-clock-o"></i> Startup Timeout (ms)</label>
-    <input type="text" id="node-input-startupTimeout" placeholder="120000">
-    <div class="form-tip">Time to wait for the Python environment to start (default: 120000ms)</div>
-</div>
+<script type="text/html" data-template-name="python-env">
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+    <div class="form-row">
+        <label for="node-input-projectDir"><i class="fa fa-folder"></i> Project Directory</label>
+        <input type="text" id="node-input-projectDir" placeholder="/path/to/pixi/project">
+        <div class="form-tip">Directory containing a pixi.toml file that defines the Python environment</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-environment"><i class="fa fa-cog"></i> Environment</label>
+        <input type="text" id="node-input-environment" placeholder="default">
+        <div class="form-tip">Name of the pixi environment to use (default: default)</div>
+    </div>
+    <div class="form-row">
+        <label for="node-input-startupTimeout"><i class="fa fa-clock-o"></i> Startup Timeout (ms)</label>
+        <input type="text" id="node-input-startupTimeout" placeholder="120000">
+        <div class="form-tip">Time to wait for the Python environment to start (default: 120000ms)</div>
+    </div>
+</script>
 
 <script type="text/html" data-help-name="python-env">
     <p>Configuration node for a Python environment managed by pixi.</p>

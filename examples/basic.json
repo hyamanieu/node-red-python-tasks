@@ -1,0 +1,193 @@
+[
+    {
+        "id": "tab-1",
+        "type": "tab",
+        "label": "Python Functions Demo",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "env-1",
+        "type": "python-env",
+        "name": "Local Python",
+        "projectDir": "/path/to/your/pixi/project",
+        "environment": "default",
+        "startupTimeout": 120000,
+        "z": "tab-1",
+        "x": 100,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "inject-1",
+        "type": "inject",
+        "name": "Trigger",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "5",
+        "payloadType": "num",
+        "x": 100,
+        "y": 200,
+        "wires": [
+            ["func-1"]
+        ]
+    },
+    {
+        "id": "func-1",
+        "type": "python-function",
+        "name": "Multiply by 2",
+        "env": "env-1",
+        "functionBody": "return payload * 2",
+        "imports": "",
+        "timeout": 30000,
+        "z": "tab-1",
+        "x": 300,
+        "y": 200,
+        "wires": [
+            ["debug-1"]
+        ]
+    },
+    {
+        "id": "debug-1",
+        "type": "debug",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 500,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "func-2",
+        "type": "python-function",
+        "name": "Use NumPy",
+        "env": "env-1",
+        "functionBody": "import numpy as np\nreturn float(np.mean(payload))",
+        "imports": "numpy",
+        "timeout": 30000,
+        "z": "tab-1",
+        "x": 300,
+        "y": 300,
+        "wires": [
+            ["debug-2"]
+        ]
+    },
+    {
+        "id": "inject-2",
+        "type": "inject",
+        "name": "Array Input",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "[1,2,3,4,5]",
+        "payloadType": "json",
+        "x": 100,
+        "y": 300,
+        "wires": [
+            ["func-2"]
+        ]
+    },
+    {
+        "id": "debug-2",
+        "type": "debug",
+        "name": "NumPy Result",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 500,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "run-1",
+        "type": "python-run",
+        "name": "Run Python Script",
+        "env": "env-1",
+        "command": "python",
+        "args": "-c",
+        "timeout": 30000,
+        "z": "tab-1",
+        "x": 300,
+        "y": 400,
+        "wires": [
+            ["debug-3"]
+        ]
+    },
+    {
+        "id": "inject-3",
+        "type": "inject",
+        "name": "Script Trigger",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "print('Hello from Python!')",
+        "payloadType": "str",
+        "x": 100,
+        "y": 400,
+        "wires": [
+            ["run-1"]
+        ]
+    },
+    {
+        "id": "debug-3",
+        "type": "debug",
+        "name": "Script Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 500,
+        "y": 400,
+        "wires": []
+    }
+]

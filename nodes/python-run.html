@@ -1,20 +1,26 @@
 <script type="text/javascript">
 RED.nodes.registerType('python-run',{
     category: 'python',
-    color: '#999999',
+    color: '#306998',
     defaults: {
         name: {value: ''},
-        env: {type: 'python-env'},
-        command: {value: ''}
+        env: {type: 'python-env', required: true},
+        command: {value: '', required: true},
+        args: {value: ''},
+        timeout: {value: 30000}
     },
     inputs: 1,
     outputs: 1,
     icon: "python.png",
     label: function() {
-        return this.name || "python-run";
+        return this.name || "Python Run";
     },
     oneditprepare: function() {
-        // Phase 0: stub editor UI
+        // Configure timeout as number
+        $('#node-input-timeout').typedInput({
+            type: 'num',
+            types: ['num']
+        });
     }
 });
 </script>
@@ -26,8 +32,34 @@ RED.nodes.registerType('python-run',{
 <div class="form-row">
     <label for="node-input-env"><i class="fa fa-cog"></i> Python Environment</label>
     <input type="text" id="node-input-env">
+    <div class="form-tip">Select a configured Python environment</div>
 </div>
 <div class="form-row">
     <label for="node-input-command"><i class="fa fa-terminal"></i> Command</label>
-    <input type="text" id="node-input-command" placeholder="command-name">
+    <input type="text" id="node-input-command" placeholder="python-script">
+    <div class="form-tip">Command to execute via pixi run</div>
 </div>
+<div class="form-row">
+    <label for="node-input-args"><i class="fa fa-list"></i> Fixed Arguments</label>
+    <input type="text" id="node-input-args" placeholder="arg1, arg2">
+    <div class="form-tip">Comma-separated list of arguments to pass before the payload arguments</div>
+</div>
+<div class="form-row">
+    <label for="node-input-timeout"><i class="fa fa-clock-o"></i> Timeout (ms)</label>
+    <input type="text" id="node-input-timeout" placeholder="30000">
+    <div class="form-tip">Per-call timeout in milliseconds. Set to 0 to disable timeout.</div>
+</div>
+
+<script type="text/html" data-help-name="python-run">
+    <p>Executes a Python command via <code>pixi run</code> for each input message.</p>
+    <p><b>Command:</b> The command name to execute. This will be resolved via the PATH in the specified Python environment.</p>
+    <p><b>Fixed Arguments:</b> Optional arguments that are always passed to the command.</p>
+    <p><b>Payload Handling:</b></p>
+    <ul>
+        <li>If <code>msg.payload</code> is an <b>array</b>, each element becomes a positional argument (stringified)</li>
+        <li>If <code>msg.payload</code> is an <b>object</b>, it is passed as a single JSON string</li>
+        <li>Otherwise, the payload is stringified and passed as a single argument</li>
+    </ul>
+    <p><b>Output:</b> The command's stdout (trimmed) is set as <code>msg.payload</code>.</p>
+    <p><b>Error Handling:</b> Non-zero exit codes produce errors catchable by catch nodes.</p>
+</script>

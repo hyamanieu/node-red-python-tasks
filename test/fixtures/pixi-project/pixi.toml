@@ -1,0 +1,16 @@
+[project]
+name = "node-red-python-test"
+version = "0.1.0"
+description = "Test project for Node-RED Python nodes"
+authors = []
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[environments]
+default = ["numpy", "pandas"]
+
+[feature.test]
+dependencies = ["pytest"]
+
+[tool.pixi.simple]
+pm = "pip"

@@ -1,20 +1,26 @@
 <script type="text/javascript">
 RED.nodes.registerType('python-function',{
     category: 'python',
-    color: '#999999',
+    color: '#306998',
     defaults: {
         name: {value: ''},
-        env: {type: 'python-env'},
-        func: {value: ''}
+        env: {type: 'python-env', required: true},
+        functionBody: {value: ''},
+        imports: {value: ''},
+        timeout: {value: 30000}
     },
     inputs: 1,
     outputs: 1,
     icon: "python.png",
     label: function() {
-        return this.name || "python-function";
+        return this.name || "Python Function";
     },
     oneditprepare: function() {
-        // Phase 0: stub editor UI
+        // Configure timeout as number
+        $('#node-input-timeout').typedInput({
+            type: 'num',
+            types: ['num']
+        });
     }
 });
 </script>
@@ -26,8 +32,29 @@ RED.nodes.registerType('python-function',{
 <div class="form-row">
     <label for="node-input-env"><i class="fa fa-cog"></i> Python Environment</label>
     <input type="text" id="node-input-env">
+    <div class="form-tip">Select a configured Python environment</div>
 </div>
 <div class="form-row">
-    <label for="node-input-func"><i class="fa fa-code"></i> Function</label>
-    <textarea type="text" id="node-input-func" placeholder="def my_function(msg):\n    return msg"></textarea>
+    <label for="node-input-functionBody"><i class="fa fa-code"></i> Function Body</label>
+    <textarea type="text" id="node-input-functionBody" placeholder="return payload * 2" rows="10"></textarea>
+    <div class="form-tip">Python code that processes the msg.payload. Use 'payload' as the input variable. Do not include 'def' or 'return' statements.</div>
 </div>
+<div class="form-row">
+    <label for="node-input-imports"><i class="fa fa-book"></i> Pre-imported Modules</label>
+    <input type="text" id="node-input-imports" placeholder="numpy, pandas">
+    <div class="form-tip">Comma-separated list of modules to import before executing the function (e.g., numpy,pandas)</div>
+</div>
+<div class="form-row">
+    <label for="node-input-timeout"><i class="fa fa-clock-o"></i> Timeout (ms)</label>
+    <input type="text" id="node-input-timeout" placeholder="30000">
+    <div class="form-tip">Per-call timeout in milliseconds. Set to 0 to disable timeout.</div>
+</div>
+
+<script type="text/html" data-help-name="python-function">
+    <p>Executes a Python function for each input message using a persistent worker process.</p>
+    <p><b>Function Body:</b> Enter Python code that uses <code>payload</code> as the input. The code should return the result.</p>
+    <p><b>Example:</b> <code>return payload * 2</code> will double the input value.</p>
+    <p><b>Pre-imported Modules:</b> Specify modules to import automatically (e.g., <code>numpy,pandas</code>). These will be available in your function without explicit import statements.</p>
+    <p><b>Persistent Worker:</b> A worker process is started once per Python environment and reused for all function calls, providing low-latency execution.</p>
+    <p><b>Error Handling:</b> Python exceptions are caught and sent to catch nodes, with full type, message, and traceback information.</p>
+</script>

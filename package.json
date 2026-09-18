@@ -1,10 +1,11 @@
 {
   "name": "node-red-python-tasks",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Node-RED nodes for calling Python functions from your flows",
   "keywords": [
     "node-red",
-    "python"
+    "python",
+    "pixi"
   ],
   "license": "MIT",
   "author": "",
@@ -19,7 +20,7 @@
   "main": "nodes/index.js",
   "scripts": {
     "preinstall": "curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=/usr/src/node-red/.pixi PIXI_VERSION=v0.81.0 PIXI_NO_PATH_UPDATE=1 sh",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo 'Tests require devDependencies. Run: npm install --save-dev && npm test'"
   },
   "node-red": {
     "nodes": {

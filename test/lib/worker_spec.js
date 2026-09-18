@@ -1,0 +1,183 @@
+// Test suite for lib/worker.js
+
+const WorkerManager = require('../../lib/worker');
+const chai = require('chai');
+const expect = chai.expect;
+const path = require('path');
+const fs = require('fs');
+
+describe('WorkerManager', function() {
+    const testProjectDir = path.join(__dirname, '..', 'fixtures', 'pixi-project');
+
+    before(function() {
+        // Ensure test fixtures directory exists
+        if (!fs.existsSync(testProjectDir)) {
+            fs.mkdirSync(testProjectDir, { recursive: true });
+        }
+        
+        // Create a minimal pixi.toml if it doesn't exist
+        const pixiTomlPath = path.join(testProjectDir, 'pixi.toml');
+        if (!fs.existsSync(pixiTomlPath)) {
+            fs.writeFileSync(pixiTomlPath, `
+[project]
+name = "node-red-python-test"
+version = "0.1.0"
+description = "Test project"
+authors = []
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[environments]
+default = []
+
+[tool.pixi.simple]
+pm = "pip"
+`);
+        }
+    });
+
+    describe('constructor', function() {
+        it('should create a worker manager with options', function() {
+            const manager = new WorkerManager({
+                projectDir: testProjectDir,
+                environment: 'test',
+                startupTimeout: 5000
+            });
+
+            expect(manager.options.projectDir).to.equal(testProjectDir);
+            expect(manager.options.environment).to.equal('test');
+            expect(manager.options.startupTimeout).to.equal(5000);
+            expect(manager.status).to.equal('stopped');
+        });
+
+        it('should use default values', function() {
+            const manager = new WorkerManager({
+                projectDir: testProjectDir
+            });
+
+            expect(manager.options.environment).to.equal('default');
+            expect(manager.options.startupTimeout).to.equal(120000);
+        });
+    });
+
+    describe('status management', function() {
+        it('should start with stopped status', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            expect(manager.getStatus()).to.equal('stopped');
+        });
+
+        it('should report isReady correctly', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            expect(manager.isReady()).to.be.false;
+        });
+    });
+
+    describe('createRequest and formatMessage', function() {
+        it('should create properly formatted request messages', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            
+            const message = manager.protocol.createRequest('define', {
+                function_id: 'test_func',
+                source: 'return payload * 2',
+                imports: ['numpy']
+            });
+
+            const parsed = JSON.parse(message.trim());
+            expect(parsed).to.have.property('id');
+            expect(parsed).to.have.property('op', 'define');
+            expect(parsed).to.have.property('function_id', 'test_func');
+        });
+
+        it('should format messages with newline', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            const formatted = manager.protocol.formatMessage({ id: '123', op: 'ping' });
+            expect(formatted).to.match(/\n$/);
+        });
+    });
+
+    describe('listeners', function() {
+        it('should add and notify listeners', function(done) {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            
+            manager.addListener((event, ...args) => {
+                expect(event).to.equal('test-event');
+                expect(args).to.deep.equal(['arg1', 'arg2']);
+                done();
+            });
+
+            manager.notifyListeners('test-event', 'arg1', 'arg2');
+        });
+
+        it('should handle listener errors without crashing', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            
+            manager.addListener(() => {
+                throw new Error('Listener error');
+            });
+
+            // Should not throw
+            manager.notifyListeners('test-event');
+        });
+    });
+
+    describe('processIncoming', function() {
+        it('should process ready messages', function(done) {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            
+            manager.once('ready', (message) => {
+                expect(message).to.deep.equal({
+                    op: 'ready',
+                    protocol: 1,
+                    python: '3.12.3'
+                });
+                done();
+            });
+
+            manager.protocol.processIncoming('{"op":"ready","protocol":1,"python":"3.12.3"}\n');
+        });
+
+        it('should process error responses', function(done) {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            
+            // Create a request first
+            const message = manager.protocol.createRequest('call', {
+                function_id: 'test_func',
+                payload: { test: 'data' }
+            });
+            const request = JSON.parse(message.trim());
+            const requestId = request.id;
+
+            manager.protocol.waitForResponse(requestId, 100).catch((err) => {
+                expect(err).to.be.instanceOf(Error);
+                expect(err.message).to.equal('test error');
+                done();
+            });
+
+            // Process error response
+            const errorResponse = `{"id":"${requestId}","ok":false,"error":{"type":"ValueError","message":"test error","traceback":"..."}}\n`;
+            manager.protocol.processIncoming(errorResponse);
+        });
+
+        it('should process success responses', function(done) {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            
+            // Create a request first
+            const message = manager.protocol.createRequest('call', {
+                function_id: 'test_func',
+                payload: { test: 'data' }
+            });
+            const request = JSON.parse(message.trim());
+            const requestId = request.id;
+
+            manager.protocol.waitForResponse(requestId, 100).then((response) => {
+                expect(response.ok).to.be.true;
+                expect(response.result).to.deep.equal({ output: 'result' });
+                done();
+            }).catch(done);
+
+            // Process success response
+            const successResponse = `{"id":"${requestId}","ok":true,"result":{"output":"result"}}\n`;
+            manager.protocol.processIncoming(successResponse);
+        });
+    });
+});

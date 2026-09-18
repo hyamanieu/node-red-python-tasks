@@ -6,6 +6,9 @@ FROM nodered/node-red:4.1.15-22
 # Switch to root to perform installation
 USER root
 
+# Install curl (needed for pixi installation)
+RUN apk add --no-cache curl
+
 # Copy package.json and entrypoint first
 COPY package.json /data/node-red-node-red-python-tasks/
 COPY entrypoint.sh /usr/src/node-red/entrypoint.sh
@@ -14,15 +17,21 @@ RUN chmod +x /usr/src/node-red/entrypoint.sh
 # Set up pixi home directory (this must be set before npm install)
 ENV PIXI_HOME=/usr/src/node-red/.pixi
 
-# Install pixi via npm preinstall script
+# Install pixi via npm preinstall script (production only, no devDependencies)
 WORKDIR /data/node-red-node-red-python-tasks
-RUN npm install --no-save
+RUN npm install --no-save --omit=dev
 
 # Add pixi to PATH
 ENV PATH="$PIXI_HOME/bin:$PATH"
 
 # Copy the nodes directory
 COPY nodes/ /data/node-red-node-red-python-tasks/nodes/
+
+# Copy lib, python, and examples directories
+COPY lib/ /data/node-red-node-red-python-tasks/lib/
+COPY python/ /data/node-red-node-red-python-tasks/python/
+COPY examples/ /data/node-red-node-red-python-tasks/examples/
+COPY CONTRIBUTING.md /data/node-red-node-red-python-tasks/
 
 # The entrypoint script will create the symlink from node_modules to the mounted package
 

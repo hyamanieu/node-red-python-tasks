@@ -4,20 +4,24 @@
 const path = require('path');
 const fs = require('fs');
 const WorkerManager = require('../lib/worker');
+const ProjectManager = require('../lib/project-manager');
 
 module.exports = function(RED) {
     /**
      * Python Environment Configuration Node
-     * Holds the path to a directory containing a pixi.toml and the name of the pixi environment
+     * Defines a Python environment by listing dependencies, internally manages a pixi project
      */
     function PythonEnvNode(config) {
         RED.nodes.createNode(this, config);
 
         // Store configuration
         this.name = config.name || '';
-        this.projectDir = config.projectDir || '';
+        this.dependencies = config.dependencies || '';
         this.environment = config.environment || 'default';
         this.startupTimeout = parseInt(config.startupTimeout) || 120000;
+        
+        // Internal: the generated project directory
+        this.projectDir = null;
 
         // Worker manager instance
         this.workerManager = null;
@@ -25,51 +29,70 @@ module.exports = function(RED) {
         // Node status tracking
         this.workerStatus = 'initializing';
 
-        // Validate configuration on creation
-        this.validateConfig();
-
-        // Create worker manager if config is valid
-        if (this.isValid()) {
-            this.createWorkerManager();
-        }
+        // Validate configuration and create project directory (async)
+        const node = this;
+        this.validateConfig().then(function(isValid) {
+            if (isValid) {
+                node.createWorkerManager();
+            }
+        }).catch(function(err) {
+            node.error('Configuration validation failed: ' + err.message);
+            node.workerStatus = 'error';
+            node.updateStatus();
+        });
 
         // Handle node close (redeploy or removal)
-        const node = this;
         this.on('close', function(done) {
             node.cleanup(done);
         });
     }
 
     /**
-     * Validate the configuration
-     * @returns {boolean} - true if valid
+     * Validate the configuration and create the project directory
+     * @returns {Promise<boolean>} - true if valid
      */
-    PythonEnvNode.prototype.validateConfig = function() {
-        // Check if project directory exists
-        if (!this.projectDir) {
-            this.error(RED._('python-env.errors.noProjectDir') || 'Project directory is required');
+    PythonEnvNode.prototype.validateConfig = async function() {
+        // Check if dependencies are provided
+        if (!this.dependencies || this.dependencies.trim().length === 0) {
+            this.error(RED._('python-env.errors.noDependencies') || 'At least one dependency is required');
             this.workerStatus = 'error';
             return false;
         }
 
-        // Check if directory exists
-        if (!fs.existsSync(this.projectDir)) {
-            this.error(RED._('python-env.errors.directoryNotFound', { dir: this.projectDir }) || `Directory not found: ${this.projectDir}`);
+        // Parse dependencies from newline-separated string
+        const deps = this.parseDependencies();
+        
+        if (deps.length === 0) {
+            this.error(RED._('python-env.errors.invalidDependencies') || 'Invalid dependency specifications');
             this.workerStatus = 'error';
             return false;
         }
 
-        // Check if pixi.toml exists
-        const pixiTomlPath = path.join(this.projectDir, 'pixi.toml');
-        if (!fs.existsSync(pixiTomlPath)) {
-            this.error(RED._('python-env.errors.noPixiToml', { dir: this.projectDir }) || `No pixi.toml found in ${this.projectDir}`);
+        try {
+            // Create a temporary project directory with the dependencies
+            this.projectDir = await ProjectManager.createProject(deps);
+            this.workerStatus = 'valid';
+            return true;
+        } catch (err) {
+            this.error(RED._('python-env.errors.projectCreationFailed') || `Failed to create project: ${err.message}`);
             this.workerStatus = 'error';
             return false;
         }
-
-        // Config is valid
-        this.workerStatus = 'valid';
-        return true;
+    };
+    
+    /**
+     * Parse dependencies from newline-separated string
+     * @returns {string[]} - Array of dependency specifications
+     */
+    PythonEnvNode.prototype.parseDependencies = function() {
+        if (!this.dependencies) {
+            return [];
+        }
+        
+        return this.dependencies
+            .split('\n')
+            .map(dep => dep.trim())
+            .filter(dep => dep.length > 0);
     };
 
     /**
@@ -206,6 +229,13 @@ module.exports = function(RED) {
                 await this.workerManager.stop();
                 this.workerManager = null;
             }
+            
+            // Clean up the temporary project directory
+            if (this.projectDir) {
+                await ProjectManager.cleanupProject(this.projectDir);
+                this.projectDir = null;
+            }
+            
             this.workerStatus = 'stopped';
             this.updateStatus();
             cleanupDone();

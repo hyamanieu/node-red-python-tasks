@@ -4,7 +4,7 @@ RED.nodes.registerType('python-env',{
     color: '#306998',
     defaults: {
         name: {value: ''},
-        projectDir: {value: '', required: true},
+        dependencies: {value: ''},
         environment: {value: 'default'},
         startupTimeout: {value: 120000}
     },
@@ -15,6 +15,12 @@ RED.nodes.registerType('python-env',{
         return this.name || "Python Environment";
     },
     oneditprepare: function() {
+        // Configure dependencies as a list of package specs
+        $('#node-input-dependencies').typedInput({
+            type: 'str',
+            types: ['str']
+        });
+        
         // Configure timeout as number
         $('#node-input-startupTimeout').typedInput({
             type: 'num',
@@ -30,9 +36,9 @@ RED.nodes.registerType('python-env',{
         <input type="text" id="node-input-name" placeholder="Name">
     </div>
     <div class="form-row">
-        <label for="node-input-projectDir"><i class="fa fa-folder"></i> Project Directory</label>
-        <input type="text" id="node-input-projectDir" placeholder="/path/to/pixi/project">
-        <div class="form-tip">Directory containing a pixi.toml file that defines the Python environment</div>
+        <label for="node-input-dependencies"><i class="fa fa-list"></i> Dependencies</label>
+        <textarea type="text" id="node-input-dependencies" placeholder="python=3.9&#10;numpy&#10;pandas=2.0" rows="5"></textarea>
+        <div class="form-tip">Package specifications with optional versions, one per line (e.g., python=3.9, numpy, pandas=2.0)</div>
     </div>
     <div class="form-row">
         <label for="node-input-environment"><i class="fa fa-cog"></i> Environment</label>
@@ -48,7 +54,8 @@ RED.nodes.registerType('python-env',{
 
 <script type="text/html" data-help-name="python-env">
     <p>Configuration node for a Python environment managed by pixi.</p>
-    <p>Specify the directory containing a <code>pixi.toml</code> file and the environment name to use.</p>
-    <p>The environment will be installed and a worker process will be started to execute Python functions.</p>
+    <p>Specify the package dependencies (with optional versions) needed for your Python code.</p>
+    <p>The node will internally create a pixi project with these dependencies and start a worker process to execute Python functions.</p>
     <p><b>Note:</b> This is a configuration node. It will not appear as a node in your flows but can be referenced by python-function and python-run nodes.</p>
+    <p><b>Dependency format:</b> One package per line, optionally with version specifiers. Examples: <code>python=3.9</code>, <code>numpy</code>, <code>pandas&gt;=2.0</code></p>
 </script>

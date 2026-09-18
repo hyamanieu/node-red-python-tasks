@@ -25,9 +25,9 @@ The one exception: a field whose value is literally a path to a `pixi.toml` may 
 
 ### In scope
 
-1. `python-env` configuration node — holds the path to a directory containing a `pixi.toml`, and the
-   name of the pixi environment to use (default: `default`). Dependencies may be specified as PyPI,
-   conda-forge packages, git URLs, or a private package index — not local file paths.
+1. `python-env` configuration node — defines a Python environment by listing dependencies with version
+   specifications (e.g., `["python=3.9", "numpy=1"]`). The node internally manages a pixi project and
+   environment. Users do not need access to the Node-RED hosting machine's filesystem.
 2. `python-function` node — references a `python-env` and stores a Python function body as text; executed
    via a persistent worker process per `python-env` instance using a JSON-lines protocol. The worker is
    a synchronous, single-threaded loop — one request from a given environment is fully processed
@@ -50,7 +50,7 @@ The one exception: a field whose value is literally a path to a `pixi.toml` may 
 Do not implement, and do not add configuration fields in anticipation of:
 
 - Containerised or remote execution (Phases 3 and 5).
-- Generating `pixi.toml` from a dependency list (Phase 2). The MVP requires an existing file.
+- Direct TOML file editing in the node UI (Phase 2).
 - Input/output schema validation (Phase 2).
 - Multiple workers per environment, or any concurrency beyond what one worker provides (Phase 2).
 - Streaming or generator support (Phase 2).
@@ -68,19 +68,19 @@ Type name: `python-env`.
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `name` | string | no | Display label |
-| `projectDir` | string | yes | Directory containing `pixi.toml` |
+| `dependencies` | string[] | yes | Package specifications with versions (e.g., `["python=3.9", "numpy=1"]`) |
 | `environment` | string | no | pixi environment name, default `default` |
 | `startupTimeout` | number | no | Milliseconds to wait for worker readiness, default `120000` |
 
 Behaviour:
 
-- On deploy, verify `projectDir` exists and contains `pixi.toml`. If not, the node is in an error
-  state and any `python-function` referencing it fails fast with a clear message.
+- On deploy, the node internally creates a temporary pixi project with the specified dependencies.
 - Install/resolve the environment (`pixi install`) before launching the worker. This can be slow on
   first run; the startup timeout must accommodate it.
 - Launch exactly one worker process, lazily on first use or at deploy time (implementer's choice —
   document which).
 - Shut the worker down cleanly on node close and on redeploy. No orphaned processes.
+- Users do not need filesystem access to the Node-RED host; everything is managed internally.
 
 ### `python-function` (execution node)
 
@@ -255,7 +255,7 @@ The task is complete when all of the following hold:
    carries type, message and traceback.
 6. Killing the worker process externally causes an automatic restart, and the next message succeeds.
 7. Redeploying the flow leaves no orphaned Python processes.
-8. A `python-env` pointing at a non-existent directory produces a clear error at deploy time, not a
+8. A `python-env` with invalid dependency specifications produces a clear error at deploy time, not a
    stack trace at first message.
 9. `npm test` passes; tests use `node-red-node-test-helper` and cover success, exception, timeout,
    worker restart and malformed-payload paths for both `python-function` and `python-run`.

@@ -50,8 +50,9 @@ Node-RED instance with both nodes available in the palette, ready for Phase 1 im
 In **production**, Python runs directly on the host where Node-RED is running. In **development and
 testing**, everything (including Node-RED) runs in containers as established in Phase 0.
 
-- `python-env` configuration node: define an environment by path to an existing `pixi.toml`, resolve
-  and install it, report status in the editor.
+- `python-env` configuration node: define an environment by listing dependencies with version specs
+  (e.g., `["python=3.9", "numpy=1"]`), internally create and manage a pixi project, resolve and install
+  it, report status in the editor. Users do not need filesystem access to the host.
 - `python-function` node: references an environment and stores a Python function body as text; executed
   via a persistent worker process per environment using a JSON-lines protocol for low latency. The
   worker is a synchronous, single-threaded loop — one request from a given environment is fully
@@ -67,7 +68,7 @@ testing**, everything (including Node-RED) runs in containers as established in 
 - Worker supervision: restart on crash, backoff, clear node status.
 - Test suite with `node-red-node-test-helper`, and CI.
 
-**Definition of done:** a user can install the package, point it at a Python environment, call a
+**Definition of done:** a user can install the package, declare dependencies in the node UI, call a
 function from a flow at a few hundred messages per second, and leave it running for a week.
 
 Implementation instructions: [docs/agent/MVP.md](./docs/agent/MVP.md).
@@ -76,8 +77,8 @@ Implementation instructions: [docs/agent/MVP.md](./docs/agent/MVP.md).
 
 Driven by whatever Phase 1 users complain about first. Candidates, in rough priority order:
 
-- **Declare dependencies in the node** and generate the environment definition automatically. This
-  is the change that makes the package usable without knowing what pixi is, so it ranks high.
+- **Direct TOML editing**: Text field in node UI for writing complete pixi.toml content, for users
+  who prefer direct control over their environment definition.
 - Optional input/output schemas, validated at the boundary and surfaced in the editor.
 - Multiple worker processes per environment for CPU-bound parallelism (resolves the MVP's
   concurrency limitation where one worker processes requests strictly sequentially).

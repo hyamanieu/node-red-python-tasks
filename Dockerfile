@@ -17,9 +17,9 @@ RUN chmod +x /usr/src/node-red/entrypoint.sh
 # Set up pixi home directory (this must be set before npm install)
 ENV PIXI_HOME=/usr/src/node-red/.pixi
 
-# Install pixi via npm preinstall script (production only, no devDependencies)
+# Install pixi via npm preinstall script
 WORKDIR /data/node-red-node-red-python-tasks
-RUN npm install --no-save --omit=dev
+RUN npm install --no-save --ignore-scripts
 
 # Add pixi to PATH
 ENV PATH="$PIXI_HOME/bin:$PATH"

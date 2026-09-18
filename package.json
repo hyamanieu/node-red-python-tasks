@@ -20,7 +20,7 @@
   "main": "nodes/index.js",
   "scripts": {
     "preinstall": "curl -fsSL https://pixi.sh/install.sh | PIXI_HOME=/usr/src/node-red/.pixi PIXI_VERSION=v0.81.0 PIXI_NO_PATH_UPDATE=1 sh",
-    "test": "echo 'Tests require devDependencies. Run: npm install --save-dev && npm test'"
+    "test": "mocha test/**/*_spec.js"
   },
   "node-red": {
     "nodes": {

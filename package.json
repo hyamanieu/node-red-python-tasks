@@ -30,7 +30,7 @@
     }
   },
   "dependencies": {
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "chai": "^4.3.7",

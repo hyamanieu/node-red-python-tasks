@@ -4,7 +4,7 @@ RED.nodes.registerType('python-run',{
     color: '#306998',
     defaults: {
         name: {value: ''},
-        env: {type: 'python-env', required: true},
+        workspace: {type: 'python-workspace', required: true},
         command: {value: '', required: true},
         args: {value: ''},
         timeout: {value: 30000}
@@ -16,10 +16,10 @@ RED.nodes.registerType('python-run',{
         return this.name || "Python Run";
     },
     oneditprepare: function() {
-        // Configure env as a config node selector
-        $('#node-input-env').typedInput({
-            type: 'python-env',
-            types: ['python-env']
+        // Configure workspace as a config node selector
+        $('#node-input-workspace').typedInput({
+            type: 'python-workspace',
+            types: ['python-workspace']
         });
         
         // Configure timeout as number
@@ -37,14 +37,14 @@ RED.nodes.registerType('python-run',{
         <input type="text" id="node-input-name" placeholder="Name">
     </div>
     <div class="form-row">
-        <label for="node-input-env"><i class="fa fa-cog"></i> Python Environment</label>
-        <input type="text" id="node-input-env">
-        <div class="form-tip">Select a configured Python environment</div>
+        <label for="node-input-workspace"><i class="fa fa-cog"></i> Python Workspace</label>
+        <input type="text" id="node-input-workspace">
+        <div class="form-tip">Select a configured Python workspace</div>
     </div>
     <div class="form-row">
         <label for="node-input-command"><i class="fa fa-terminal"></i> Command</label>
         <input type="text" id="node-input-command" placeholder="python-script">
-        <div class="form-tip">Command to execute via pixi run</div>
+        <div class="form-tip">Command to execute inside the Python workspace</div>
     </div>
     <div class="form-row">
         <label for="node-input-args"><i class="fa fa-list"></i> Fixed Arguments</label>
@@ -59,8 +59,8 @@ RED.nodes.registerType('python-run',{
 </script>
 
 <script type="text/html" data-help-name="python-run">
-    <p>Executes a Python command via <code>pixi run</code> for each input message.</p>
-    <p><b>Command:</b> The command name to execute. This will be resolved via the PATH in the specified Python environment.</p>
+    <p>Executes a Python command inside the selected workspace for each input message.</p>
+    <p><b>Command:</b> The command name to execute. This will be resolved via the PATH in the workspace's Python environment.</p>
     <p><b>Fixed Arguments:</b> Optional arguments that are always passed to the command.</p>
     <p><b>Payload Handling:</b></p>
     <ul>

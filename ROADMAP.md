@@ -50,7 +50,7 @@ Node-RED instance with both nodes available in the palette, ready for Phase 1 im
 In **production**, Python runs directly on the host where Node-RED is running. In **development and
 testing**, everything (including Node-RED) runs in containers as established in Phase 0.
 
-- `python-env` configuration node: define an environment by listing dependencies with version specs
+- `python-workspace` configuration node: define an environment by listing dependencies with version specs
   (e.g., `["python=3.9", "numpy=1"]`), internally create and manage a pixi project, resolve and install
   it, report status in the editor. Users do not need filesystem access to the host.
 - `python-function` node: references an environment and stores a Python function body as text; executed

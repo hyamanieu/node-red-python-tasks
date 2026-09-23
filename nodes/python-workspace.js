@@ -1,5 +1,5 @@
-// python-env node - configuration node for Python environments
-// Manages pixi-based Python environments and persistent worker processes
+// python-workspace node - configuration node for Python workspaces
+// Manages pixi-based Python workspaces and persistent worker processes
 
 const path = require('path');
 const fs = require('fs');
@@ -8,10 +8,10 @@ const ProjectManager = require('../lib/project-manager');
 
 module.exports = function(RED) {
     /**
-     * Python Environment Configuration Node
-     * Defines a Python environment by listing dependencies, internally manages a pixi project
+     * Python Workspace Configuration Node
+     * Defines a Python workspace by listing dependencies, internally manages a pixi project
      */
-    function PythonEnvNode(config) {
+    function PythonWorkspaceNode(config) {
         RED.nodes.createNode(this, config);
 
         // Store configuration
@@ -51,10 +51,10 @@ module.exports = function(RED) {
      * Validate the configuration and create the project directory
      * @returns {Promise<boolean>} - true if valid
      */
-    PythonEnvNode.prototype.validateConfig = async function() {
+    PythonWorkspaceNode.prototype.validateConfig = async function() {
         // Check if dependencies are provided
         if (!this.dependencies || this.dependencies.trim().length === 0) {
-            this.error(RED._('python-env.errors.noDependencies') || 'At least one dependency is required');
+            this.error(RED._('python-workspace.errors.noDependencies') || 'At least one dependency is required');
             this.workerStatus = 'error';
             return false;
         }
@@ -63,18 +63,19 @@ module.exports = function(RED) {
         const deps = this.parseDependencies();
         
         if (deps.length === 0) {
-            this.error(RED._('python-env.errors.invalidDependencies') || 'Invalid dependency specifications');
+            this.error(RED._('python-workspace.errors.invalidDependencies') || 'Invalid dependency specifications');
             this.workerStatus = 'error';
             return false;
         }
 
         try {
-            // Create a temporary project directory with the dependencies
-            this.projectDir = await ProjectManager.createProject(deps);
+            // Create or update the environment's workspace, keyed by this
+            // node's stable id so it survives restarts and redeploys
+            this.projectDir = await ProjectManager.createProject(this.id, deps);
             this.workerStatus = 'valid';
             return true;
         } catch (err) {
-            this.error(RED._('python-env.errors.projectCreationFailed') || `Failed to create project: ${err.message}`);
+            this.error(RED._('python-workspace.errors.projectCreationFailed') || `Failed to create project: ${err.message}`);
             this.workerStatus = 'error';
             return false;
         }
@@ -84,7 +85,7 @@ module.exports = function(RED) {
      * Parse dependencies from newline-separated string
      * @returns {string[]} - Array of dependency specifications
      */
-    PythonEnvNode.prototype.parseDependencies = function() {
+    PythonWorkspaceNode.prototype.parseDependencies = function() {
         if (!this.dependencies) {
             return [];
         }
@@ -99,14 +100,14 @@ module.exports = function(RED) {
      * Check if configuration is valid
      * @returns {boolean}
      */
-    PythonEnvNode.prototype.isValid = function() {
+    PythonWorkspaceNode.prototype.isValid = function() {
         return this.workerStatus === 'valid' || this.workerStatus === 'ready' || this.workerStatus === 'starting';
     };
 
     /**
      * Create the worker manager instance
      */
-    PythonEnvNode.prototype.createWorkerManager = function() {
+    PythonWorkspaceNode.prototype.createWorkerManager = function() {
         this.workerManager = new WorkerManager({
             projectDir: this.projectDir,
             environment: this.environment,
@@ -126,7 +127,7 @@ module.exports = function(RED) {
     /**
      * Start the worker process
      */
-    PythonEnvNode.prototype.startWorker = function() {
+    PythonWorkspaceNode.prototype.startWorker = function() {
         if (!this.workerManager) {
             return;
         }
@@ -140,7 +141,7 @@ module.exports = function(RED) {
             node.updateStatus();
         }).catch(function(err) {
             node.workerStatus = 'error';
-            node.error((RED._('python-env.errors.workerStartFailed') || 'Worker start failed') + ': ' + err.message);
+            node.error((RED._('python-workspace.errors.workerStartFailed') || 'Worker start failed') + ': ' + err.message);
             node.updateStatus();
         });
     };
@@ -150,7 +151,7 @@ module.exports = function(RED) {
      * @param {string} event - event name
      * @param {...any} args - event arguments
      */
-    PythonEnvNode.prototype.handleWorkerEvent = function(event, args) {
+    PythonWorkspaceNode.prototype.handleWorkerEvent = function(event, args) {
         switch (event) {
             case 'ready':
                 this.workerStatus = 'ready';
@@ -171,7 +172,7 @@ module.exports = function(RED) {
     /**
      * Update node status
      */
-    PythonEnvNode.prototype.updateStatus = function() {
+    PythonWorkspaceNode.prototype.updateStatus = function() {
         let statusText = '';
         let statusClass = '';
 
@@ -181,19 +182,19 @@ module.exports = function(RED) {
         } else {
             switch (this.workerStatus) {
                 case 'starting':
-                    statusText = 'Starting Python environment';
+                    statusText = 'Starting Python workspace';
                     statusClass = 'yellow';
                     break;
                 case 'ready':
-                    statusText = 'Python environment ready';
+                    statusText = 'Python workspace ready';
                     statusClass = 'green';
                     break;
                 case 'error':
-                    statusText = 'Python environment error';
+                    statusText = 'Python workspace error';
                     statusClass = 'red';
                     break;
                 case 'stopped':
-                    statusText = 'Python environment stopped';
+                    statusText = 'Python workspace stopped';
                     statusClass = 'grey';
                     break;
                 default:
@@ -209,7 +210,7 @@ module.exports = function(RED) {
      * Get the worker manager
      * @returns {WorkerManager|null}
      */
-    PythonEnvNode.prototype.getWorkerManager = function() {
+    PythonWorkspaceNode.prototype.getWorkerManager = function() {
         return this.workerManager;
     };
 
@@ -217,7 +218,7 @@ module.exports = function(RED) {
      * Clean up resources
      * @param {Function} [done] - callback when done
      */
-    PythonEnvNode.prototype.cleanup = async function(done) {
+    PythonWorkspaceNode.prototype.cleanup = async function(done) {
         const cleanupDone = () => {
             if (done) {
                 done();
@@ -230,11 +231,10 @@ module.exports = function(RED) {
                 this.workerManager = null;
             }
             
-            // Clean up the temporary project directory
-            if (this.projectDir) {
-                await ProjectManager.cleanupProject(this.projectDir);
-                this.projectDir = null;
-            }
+            // The workspace is persistent and keyed by its dependencies, so it
+            // is kept for reuse across restarts and redeploys; only the worker
+            // process is stopped here
+            this.projectDir = null;
             
             this.workerStatus = 'stopped';
             this.updateStatus();
@@ -245,7 +245,7 @@ module.exports = function(RED) {
         }
     };
 
-    RED.nodes.registerType("python-env", PythonEnvNode, {
+    RED.nodes.registerType("python-workspace", PythonWorkspaceNode, {
         credentials: {
             // Future: may include credentials for private registries
         }

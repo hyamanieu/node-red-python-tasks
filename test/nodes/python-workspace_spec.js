@@ -1,11 +1,11 @@
-// Test suite for nodes/python-env.js
+// Test suite for nodes/python-workspace.js
 
 const chai = require('chai');
 const expect = chai.expect;
 const path = require('path');
 const fs = require('fs');
 
-describe('python-env node', function() {
+describe('python-workspace node', function() {
     const testProjectDir = path.join(__dirname, '..', 'fixtures', 'pixi-project');
     let RED;
     let PythonEnvNode;
@@ -37,7 +37,7 @@ pm = "pip"
         }
 
         // Load the node module
-        PythonEnvNode = require('../../nodes/python-env');
+        PythonEnvNode = require('../../nodes/python-workspace');
 
         // Create mock RED
         RED = {

@@ -1,5 +1,5 @@
 <script type="text/javascript">
-RED.nodes.registerType('python-env',{
+RED.nodes.registerType('python-workspace',{
     category: 'config',
     color: '#306998',
     defaults: {
@@ -12,7 +12,7 @@ RED.nodes.registerType('python-env',{
     outputs: 0,
     icon: "font-awesome/fa-cog",
     label: function() {
-        return this.name || "Python Environment";
+        return this.name || "Python Workspace";
     },
     oneditprepare: function() {
         // Configure dependencies as a list of package specs
@@ -20,7 +20,7 @@ RED.nodes.registerType('python-env',{
             type: 'str',
             types: ['str']
         });
-        
+
         // Configure timeout as number
         $('#node-input-startupTimeout').typedInput({
             type: 'num',
@@ -30,7 +30,7 @@ RED.nodes.registerType('python-env',{
 });
 </script>
 
-<script type="text/html" data-template-name="python-env">
+<script type="text/html" data-template-name="python-workspace">
     <div class="form-row">
         <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
         <input type="text" id="node-input-name" placeholder="Name">
@@ -43,7 +43,7 @@ RED.nodes.registerType('python-env',{
     <div class="form-row">
         <label for="node-input-environment"><i class="fa fa-cog"></i> Environment</label>
         <input type="text" id="node-input-environment" placeholder="default">
-        <div class="form-tip">Name of the pixi environment to use (default: default)</div>
+        <div class="form-tip">Name of the environment to use inside this workspace (default: default)</div>
     </div>
     <div class="form-row">
         <label for="node-input-startupTimeout"><i class="fa fa-clock-o"></i> Startup Timeout (ms)</label>
@@ -52,10 +52,10 @@ RED.nodes.registerType('python-env',{
     </div>
 </script>
 
-<script type="text/html" data-help-name="python-env">
-    <p>Configuration node for a Python environment managed by pixi.</p>
-    <p>Specify the package dependencies (with optional versions) needed for your Python code.</p>
-    <p>The node will internally create a pixi project with these dependencies and start a worker process to execute Python functions.</p>
+<script type="text/html" data-help-name="python-workspace">
+    <p>Configuration node for a Python workspace.</p>
+    <p>Specify the package dependencies (with optional versions) needed for your Python code. Each workspace is a reproducible Python environment that runs the same on any machine.</p>
+    <p>The node will internally set up a Python environment with these dependencies and start a worker process to execute Python functions.</p>
     <p><b>Note:</b> This is a configuration node. It will not appear as a node in your flows but can be referenced by python-function and python-run nodes.</p>
     <p><b>Dependency format:</b> One package per line, optionally with version specifiers. Examples: <code>python=3.9</code>, <code>numpy</code>, <code>pandas&gt;=2.0</code></p>
 </script>

@@ -50,13 +50,13 @@ to a command line and parsing stdout by hand.
 
 ## Three nodes
 
-- **`python-env`** (configuration node) — describes a Python environment: which packages it needs,
+- **`python-workspace`** (configuration node) — describes a Python environment: which packages it needs,
   and where it runs. Owned once, referenced by many nodes.
-- **`python-function`** — references a `python-env` and stores a Python function body as text, authored
+- **`python-function`** — references a `python-workspace` and stores a Python function body as text, authored
   in the edit dialog (like Node-RED's core function node, but Python). You can also specify a list of
   modules to pre-import, making them available in the function body without explicit import statements.
-- **`python-run`** — references a `python-env` and stores a command name (and optionally fixed arguments),
-  resolved on the environment's PATH. The command is executed via `pixi run` inside the `python-env`.
+- **`python-run`** — references a `python-workspace` and stores a command name (and optionally fixed arguments),
+  resolved on the environment's PATH. The command is executed via `pixi run` inside the `python-workspace`.
   This covers CLI tools with no Python API and packages too large to write inline.
 
 Reusable logic is installed as a dependency (PyPI, conda-forge, git URL, or a private index), then

@@ -70,7 +70,7 @@ When reporting issues, please include:
 
 1. The version of Node-RED you're using
 2. The version of Node.js
-3. The configuration of your python-env node
+3. The configuration of your python-workspace node
 4. The flow JSON that reproduces the issue
 5. Any error messages from the Node-RED log
 6. Steps to reproduce the issue

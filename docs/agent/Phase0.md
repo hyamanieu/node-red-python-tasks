@@ -32,7 +32,7 @@ instance with the package's nodes available in the palette, ready for implementa
 
 - Production deployment configurations
 - Building or publishing the npm package (this is Phase 1 territory)
-- Any part of the actual node implementation (python-env, python-function, python-run)
+- Any part of the actual node implementation (python-workspace, python-function, python-run)
 - pixi project setup for the Python worker (can be minimal/empty for Phase 0)
 
 ## Requirements
@@ -60,7 +60,7 @@ instance with the package's nodes available in the palette, ready for implementa
 
 ### Verification
 
-- Both `python-env` and `python-function` node types must appear in the Node-RED palette
+- Both `python-workspace` and `python-function` node types must appear in the Node-RED palette
   under a `python` category (even if their implementation is stubbed)
 - A basic flow using an inject node and a debug node should work (to verify Node-RED itself)
 
@@ -81,8 +81,8 @@ Create these files. Files marked `(exists)` are already present.
         └── MVP.md             (exists)
 ├── package.json                the "node-red" key maps node types to their .js files
 └── nodes/
-    ├── python-env.js           working empty shell for now (developped in Phase 1)
-    ├── python-env.html         working empty shell for now (developped in Phase 1)
+    ├── python-workspace.js           working empty shell for now (developped in Phase 1)
+    ├── python-workspace.html         working empty shell for now (developped in Phase 1)
     ├── python-function.js      working empty shell for now (developped in Phase 1)
     ├── python-function.html    working empty shell for now (developped in Phase 1)
     ├── python-run.js           working empty shell for now (developped in Phase 1)
@@ -152,7 +152,7 @@ The task is complete when all of the following hold:
 
 1. `docker compose up -d` (or documented command) starts Node-RED accessible at
    `http://localhost:1880`
-2. `python-env`, `python-function`, `python-run` node types appear in the Node-RED palette under
+2. `python-workspace`, `python-function`, `python-run` node types appear in the Node-RED palette under
    a `python` category (and they do nothing for now)
 3. Editing a file in `nodes/` on the host and restarting Node-RED (via the container) makes
    the changes take effect

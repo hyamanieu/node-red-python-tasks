@@ -4,7 +4,7 @@ RED.nodes.registerType('python-function',{
     color: '#306998',
     defaults: {
         name: {value: ''},
-        env: {type: 'python-env', required: true},
+        workspace: {type: 'python-workspace', required: true},
         functionBody: {value: ''},
         imports: {value: ''},
         timeout: {value: 30000}
@@ -16,10 +16,10 @@ RED.nodes.registerType('python-function',{
         return this.name || "Python Function";
     },
     oneditprepare: function() {
-        // Configure env as a config node selector
-        $('#node-input-env').typedInput({
-            type: 'python-env',
-            types: ['python-env']
+        // Configure workspace as a config node selector
+        $('#node-input-workspace').typedInput({
+            type: 'python-workspace',
+            types: ['python-workspace']
         });
         
         // Configure timeout as number
@@ -37,9 +37,9 @@ RED.nodes.registerType('python-function',{
         <input type="text" id="node-input-name" placeholder="Name">
     </div>
     <div class="form-row">
-        <label for="node-input-env"><i class="fa fa-cog"></i> Python Environment</label>
-        <input type="text" id="node-input-env">
-        <div class="form-tip">Select a configured Python environment</div>
+        <label for="node-input-workspace"><i class="fa fa-cog"></i> Python Workspace</label>
+        <input type="text" id="node-input-workspace">
+        <div class="form-tip">Select a configured Python workspace</div>
     </div>
     <div class="form-row">
         <label for="node-input-functionBody"><i class="fa fa-code"></i> Function Body</label>
@@ -63,6 +63,6 @@ RED.nodes.registerType('python-function',{
     <p><b>Function Body:</b> Enter Python code that uses <code>payload</code> as the input. The code should return the result.</p>
     <p><b>Example:</b> <code>return payload * 2</code> will double the input value.</p>
     <p><b>Pre-imported Modules:</b> Specify modules to import automatically (e.g., <code>numpy,pandas</code>). These will be available in your function without explicit import statements.</p>
-    <p><b>Persistent Worker:</b> A worker process is started once per Python environment and reused for all function calls, providing low-latency execution.</p>
+    <p><b>Persistent Worker:</b> A worker process is started once per Python workspace and reused for all function calls, providing low-latency execution.</p>
     <p><b>Error Handling:</b> Python exceptions are caught and sent to catch nodes, with full type, message, and traceback information.</p>
 </script>

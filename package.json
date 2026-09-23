@@ -24,14 +24,12 @@
   },
   "node-red": {
     "nodes": {
-      "python-env": "nodes/python-env.js",
+      "python-workspace": "nodes/python-workspace.js",
       "python-function": "nodes/python-function.js",
       "python-run": "nodes/python-run.js"
     }
   },
-  "dependencies": {
-    "uuid": "^9.0.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "chai": "^4.3.7",
     "mocha": "^10.2.0",

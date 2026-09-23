@@ -25,18 +25,18 @@ The one exception: a field whose value is literally a path to a `pixi.toml` may 
 
 ### In scope
 
-1. `python-env` configuration node — defines a Python environment by listing dependencies with version
+1. `python-workspace` configuration node — defines a Python environment by listing dependencies with version
    specifications (e.g., `["python=3.9", "numpy=1"]`). The node internally manages a pixi project and
    environment. Users do not need access to the Node-RED hosting machine's filesystem.
-2. `python-function` node — references a `python-env` and stores a Python function body as text; executed
-   via a persistent worker process per `python-env` instance using a JSON-lines protocol. The worker is
+2. `python-function` node — references a `python-workspace` and stores a Python function body as text; executed
+   via a persistent worker process per `python-workspace` instance using a JSON-lines protocol. The worker is
    a synchronous, single-threaded loop — one request from a given environment is fully processed
    before the next begins. No asyncio, no thread pool, no concurrent execution within one worker.
-3. `python-run` node — references a `python-env` and stores a command name (and optionally fixed
+3. `python-run` node — references a `python-workspace` and stores a command name (and optionally fixed
    arguments); executed as one process per invocation via `pixi run -e <environment> -x <command>
    [args...]`, using pixi's `-x`/`--executable` flag so the command is executed directly rather than
    resolved as a pixi.toml task.
-4. A persistent Python worker process per `python-env` instance, launched via pixi, shared by all
+4. A persistent Python worker process per `python-workspace` instance, launched via pixi, shared by all
    `python-function` nodes referencing that environment.
 5. A JSON-lines request/response protocol over the worker's stdin/stdout, with correlation IDs.
 6. Error propagation: Python exceptions (`python-function`) and non-zero exit codes (`python-run`)
@@ -61,9 +61,9 @@ If a requirement below seems to need one of these, stop and raise it rather than
 
 ## Interface specification
 
-### `python-env` (configuration node)
+### `python-workspace` (configuration node)
 
-Type name: `python-env`.
+Type name: `python-workspace`.
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
@@ -74,7 +74,10 @@ Type name: `python-env`.
 
 Behaviour:
 
-- On deploy, the node internally creates a temporary pixi project with the specified dependencies.
+- On deploy, the node internally creates or updates a persistent pixi workspace with the specified
+  dependencies: `pixi init` for a new workspace, then `pixi add` so the installed environment converges
+  to the dependency list. Each environment (config node) owns one workspace folder, keyed by its node
+  id, which survives restarts and redeploys.
 - Install/resolve the environment (`pixi install`) before launching the worker. This can be slow on
   first run; the startup timeout must accommodate it.
 - Launch exactly one worker process, lazily on first use or at deploy time (implementer's choice —
@@ -89,7 +92,7 @@ Type name: `python-function`. One input, one output.
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `name` | string | no | Display label |
-| `env` | config node ref | yes | The `python-env` to run in |
+| `workspace` | config node ref | yes | The `python-workspace` to run in |
 | `functionBody` | string | yes | Python code (function body only, not a full `def` statement) that uses `payload` as the input argument |
 | `imports` | string[] | no | Module names to pre-import (e.g., `["numpy", "pandas"]`); available in `functionBody` without explicit import |
 | `timeout` | number | no | Per-call timeout in ms, default `30000`; `0` disables |
@@ -107,9 +110,9 @@ Behaviour:
   abandoned; consider whether the worker must be restarted and document the decision.
 - Node status reflects reality: environment installing / worker starting / ready / running / error.
 
-Execution path: Uses the persistent worker process per `python-env` and the JSON-lines protocol.
+Execution path: Uses the persistent worker process per `python-workspace` and the JSON-lines protocol.
 The worker is a synchronous, single-threaded loop — one request from a given environment is fully
-processed before the next begins. Two messages sent to the same `python-env` in quick succession are
+processed before the next begins. Two messages sent to the same `python-workspace` in quick succession are
 processed strictly in order, and the second one's latency includes waiting for the first to finish.
 
 ### `python-run` (execution node)
@@ -119,7 +122,7 @@ Type name: `python-run`. One input, one output.
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `name` | string | no | Display label |
-| `env` | config node ref | yes | The `python-env` to run in |
+| `workspace` | config node ref | yes | The `python-workspace` to run in |
 | `command` | string | yes | Command name to execute |
 | `args` | string[] | no | Fixed arguments prepended to payload arguments |
 | `timeout` | number | no | Per-call timeout in ms, default `30000`; `0` disables |
@@ -127,7 +130,7 @@ Type name: `python-run`. One input, one output.
 Behaviour:
 
 - On message: execute `pixi run -e <environment> -x <command> [args...]` where `<environment>` is the
-  pixi environment name from the `python-env` config node. The command is resolved on the environment's
+  pixi environment name from the `python-workspace` config node. The command is resolved on the environment's
   PATH via pixi's `-x`/`--executable` flag.
 - Payload-to-argv mapping: if `msg.payload` is an array, its elements become positional arguments
   (stringified) appended to the fixed `args`; if `msg.payload` is an object, it is passed as a single
@@ -207,8 +210,8 @@ Create this structure. Files marked `(exists)` are already present.
 ├── LICENSE                     MIT
 ├── package.json                the "node-red" key maps node types to their .js files
 ├── nodes/
-│   ├── python-env.js           runtime: config node, environment + worker lifecycle
-│   ├── python-env.html         editor: edit dialog and help
+│   ├── python-workspace.js           runtime: config node, environment + worker lifecycle
+│   ├── python-workspace.html         editor: edit dialog and help
 │   ├── python-function.js      runtime: execution node (function body)
 │   ├── python-function.html    editor: edit dialog and help
 │   ├── python-run.js           runtime: execution node (command)
@@ -221,7 +224,7 @@ Create this structure. Files marked `(exists)` are already present.
 │       ├── __init__.py
 │       └── __main__.py         the worker loop
 ├── test/
-│   ├── python-env_spec.js
+│   ├── python-workspace_spec.js
 │   ├── python-function_spec.js
 │   └── fixtures/
 │       └── pixi-project/       minimal pixi.toml + a module with test functions
@@ -245,7 +248,7 @@ Conventions:
 The task is complete when all of the following hold:
 
 1. `npm install` in a `~/.node-red` directory installs the package and all three nodes appear in the
-   palette under a `python` category (`python-env`, `python-function`, `python-run`).
+   palette under a `python` category (`python-workspace`, `python-function`, `python-run`).
 2. A flow with `inject → python-function → debug`, configured against the test fixture project,
    returns the function's result.
 3. The Python worker process is started once: calling `python-function` 1000 times spawns
@@ -255,7 +258,7 @@ The task is complete when all of the following hold:
    carries type, message and traceback.
 6. Killing the worker process externally causes an automatic restart, and the next message succeeds.
 7. Redeploying the flow leaves no orphaned Python processes.
-8. A `python-env` with invalid dependency specifications produces a clear error at deploy time, not a
+8. A `python-workspace` with invalid dependency specifications produces a clear error at deploy time, not a
    stack trace at first message.
 9. `npm test` passes; tests use `node-red-node-test-helper` and cover success, exception, timeout,
    worker restart and malformed-payload paths for both `python-function` and `python-run`.
@@ -264,7 +267,7 @@ The task is complete when all of the following hold:
 11. A nonzero exit status from a `python-run` invocation is catchable as a Node-RED error via a
     `catch` node.
 12. A `python-function` that uses `payload` as input and imports a pixi-installed package resolves and executes correctly.
-13. Two messages sent to the same `python-env` in quick succession via `python-function` are processed
+13. Two messages sent to the same `python-workspace` in quick succession via `python-function` are processed
     strictly in order, and the second one's latency includes waiting for the first to finish.
 
 ## Working agreement

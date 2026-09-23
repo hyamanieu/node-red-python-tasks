@@ -13,13 +13,13 @@ module.exports = function(RED) {
 
         // Store configuration
         this.name = config.name || '';
-        this.env = config.env || '';
+        this.workspace = config.workspace || '';
         this.functionBody = config.functionBody || '';
         this.imports = config.imports || '';
         this.timeout = parseInt(config.timeout) || 30000;
 
-        // Get the environment config node
-        this.envNode = RED.nodes.getNode(this.env);
+        // Get the workspace config node
+        this.workspaceNode = RED.nodes.getNode(this.workspace);
 
         // Function identifier (based on node ID and function hash)
         this.functionId = `func_${this.id}`;
@@ -34,8 +34,8 @@ module.exports = function(RED) {
         this.nodeStatus = 'initializing';
 
         // Check if we have a valid environment
-        if (!this.envNode || !this.envNode.isValid()) {
-            this.error(RED._('python-function.errors.invalidEnv') || 'Invalid Python environment configuration');
+        if (!this.workspaceNode || !this.workspaceNode.isValid()) {
+            this.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
             this.nodeStatus = 'error';
         } else {
             // Wait for worker to be ready, then define function
@@ -60,13 +60,13 @@ module.exports = function(RED) {
     PythonFunctionNode.prototype.waitForWorkerReady = function() {
         const node = this;
 
-        if (!node.envNode || !node.envNode.isValid()) {
+        if (!node.workspaceNode || !node.workspaceNode.isValid()) {
             node.nodeStatus = 'error';
             node.updateStatus();
             return;
         }
 
-        const workerManager = node.envNode.getWorkerManager();
+        const workerManager = node.workspaceNode.getWorkerManager();
         if (!workerManager) {
             node.nodeStatus = 'error';
             node.updateStatus();
@@ -101,13 +101,13 @@ module.exports = function(RED) {
     PythonFunctionNode.prototype.defineFunction = function() {
         const node = this;
 
-        if (!node.envNode || !node.envNode.isValid()) {
+        if (!node.workspaceNode || !node.workspaceNode.isValid()) {
             node.nodeStatus = 'error';
             node.updateStatus();
             return;
         }
 
-        const workerManager = node.envNode.getWorkerManager();
+        const workerManager = node.workspaceNode.getWorkerManager();
         if (!workerManager || !workerManager.isReady()) {
             node.nodeStatus = 'waiting';
             node.updateStatus();
@@ -147,14 +147,14 @@ module.exports = function(RED) {
         const node = this;
 
         // If function not yet defined, queue the message
-        if (!node.isFunctionDefined || !node.envNode || !node.envNode.isValid()) {
+        if (!node.isFunctionDefined || !node.workspaceNode || !node.workspaceNode.isValid()) {
             node.pendingMessages.push(msg);
             node.nodeStatus = 'queued';
             node.updateStatus();
             return;
         }
 
-        const workerManager = node.envNode.getWorkerManager();
+        const workerManager = node.workspaceNode.getWorkerManager();
         if (!workerManager || !workerManager.isReady()) {
             node.pendingMessages.push(msg);
             node.nodeStatus = 'queued';
@@ -204,11 +204,11 @@ module.exports = function(RED) {
         }
 
         // Only process if we're ready
-        if (!node.isFunctionDefined || !node.envNode || !node.envNode.isValid()) {
+        if (!node.isFunctionDefined || !node.workspaceNode || !node.workspaceNode.isValid()) {
             return;
         }
 
-        const workerManager = node.envNode.getWorkerManager();
+        const workerManager = node.workspaceNode.getWorkerManager();
         if (!workerManager || !workerManager.isReady()) {
             return;
         }
@@ -233,7 +233,7 @@ module.exports = function(RED) {
                 statusClass = 'yellow';
                 break;
             case 'waiting':
-                statusText = 'Waiting for environment';
+                statusText = 'Waiting for workspace';
                 statusClass = 'yellow';
                 break;
             case 'defining':

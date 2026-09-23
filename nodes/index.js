@@ -6,8 +6,8 @@
 
 module.exports = {
     // These are loaded individually by Node-RED, but we export them here for completeness
-    get pythonEnv() {
-        return require('./python-env');
+    get pythonWorkspace() {
+        return require('./python-workspace');
     },
     get pythonFunction() {
         return require('./python-function');

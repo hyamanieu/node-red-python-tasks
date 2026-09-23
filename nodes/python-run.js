@@ -14,20 +14,20 @@ module.exports = function(RED) {
 
         // Store configuration
         this.name = config.name || '';
-        this.env = config.env || '';
+        this.workspace = config.workspace || '';
         this.command = config.command || '';
         this.args = config.args || '';
         this.timeout = parseInt(config.timeout) || 30000;
 
-        // Get the environment config node
-        this.envNode = RED.nodes.getNode(this.env);
+        // Get the workspace config node
+        this.workspaceNode = RED.nodes.getNode(this.workspace);
 
         // Node status
         this.nodeStatus = 'initializing';
 
         // Validate configuration
-        if (!this.envNode || !this.envNode.isValid()) {
-            this.error(RED._('python-run.errors.invalidEnv') || 'Invalid Python environment configuration');
+        if (!this.workspaceNode || !this.workspaceNode.isValid()) {
+            this.error(RED._('python-run.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
             this.nodeStatus = 'error';
         } else if (!this.command) {
             this.error(RED._('python-run.errors.noCommand') || 'Command is required');
@@ -56,8 +56,8 @@ module.exports = function(RED) {
         const node = this;
 
         // Check if we have a valid environment
-        if (!node.envNode || !node.envNode.isValid()) {
-            const err = new Error(RED._('python-run.errors.invalidEnv') || 'Invalid Python environment configuration');
+        if (!node.workspaceNode || !node.workspaceNode.isValid()) {
+            const err = new Error(RED._('python-run.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
             node.error(err, msg);
             return;
         }
@@ -95,8 +95,8 @@ module.exports = function(RED) {
         const allArgs = [...fixedArgs, ...processArgs];
 
         // Execute via pixi run
-        const environment = node.envNode.environment || 'default';
-        const projectDir = node.envNode.projectDir;
+        const environment = node.workspaceNode.environment || 'default';
+        const projectDir = node.workspaceNode.projectDir;
 
         // Get pixi path
         const pixiPath = process.env.PIXI_HOME ? path.join(process.env.PIXI_HOME, 'bin', 'pixi') : 'pixi';

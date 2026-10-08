@@ -25,7 +25,7 @@ module.exports = function(RED) {
 
         // Worker manager instance
         this.workerManager = null;
-
+        
         // Node status tracking
         this.workerStatus = 'initializing';
 
@@ -244,7 +244,6 @@ module.exports = function(RED) {
             cleanupDone();
         }
     };
-
     RED.nodes.registerType("python-workspace", PythonWorkspaceNode, {
         credentials: {
             // Future: may include credentials for private registries

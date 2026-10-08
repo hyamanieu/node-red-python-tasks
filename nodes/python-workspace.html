@@ -3,26 +3,19 @@ RED.nodes.registerType('python-workspace',{
     category: 'config',
     color: '#306998',
     defaults: {
-        name: {value: ''},
-        dependencies: {value: ''},
+        name: {value: '', required: true},
+        dependencies: {value: '', required: true},
         environment: {value: 'default'},
-        startupTimeout: {value: 120000}
+        startupTimeout: {value: 120000, validate:RED.validators.number() }
     },
-    inputs: 0,
-    outputs: 0,
     icon: "font-awesome/fa-cog",
     label: function() {
         return this.name || "Python Workspace";
     },
     oneditprepare: function() {
-        // Configure dependencies as a list of package specs
-        $('#node-input-dependencies').typedInput({
-            type: 'str',
-            types: ['str']
-        });
 
         // Configure timeout as number
-        $('#node-input-startupTimeout').typedInput({
+        $('#node-config-input-startupTimeout').typedInput({
             type: 'num',
             types: ['num']
         });
@@ -32,22 +25,22 @@ RED.nodes.registerType('python-workspace',{
 
 <script type="text/html" data-template-name="python-workspace">
     <div class="form-row">
-        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
-        <input type="text" id="node-input-name" placeholder="Name">
+        <label for="node-config-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-config-input-name" placeholder="Name">
     </div>
     <div class="form-row">
-        <label for="node-input-dependencies"><i class="fa fa-list"></i> Dependencies</label>
-        <textarea type="text" id="node-input-dependencies" placeholder="python=3.9&#10;numpy&#10;pandas=2.0" rows="5"></textarea>
-        <div class="form-tip">Package specifications with optional versions, one per line (e.g., python=3.9, numpy, pandas=2.0)</div>
+        <label for="node-config-input-dependencies"><i class="fa fa-list"></i> Dependencies</label>
+        <textarea id="node-config-input-dependencies" rows="5" style="resize: vertical; width: 100%; box-sizing: border-box;" placeholder="python=3.12&#10;numpy&#10;pandas=2.0"></textarea>
+        <div class="form-tip">Package specifications with optional versions, one per line (e.g., python=3.12, numpy, pandas=2.0)</div>
     </div>
     <div class="form-row">
-        <label for="node-input-environment"><i class="fa fa-cog"></i> Environment</label>
-        <input type="text" id="node-input-environment" placeholder="default">
+        <label for="node-config-input-environment"><i class="fa fa-cog"></i> Environment</label>
+        <input type="text" id="node-config-input-environment" placeholder="default">
         <div class="form-tip">Name of the environment to use inside this workspace (default: default)</div>
     </div>
     <div class="form-row">
-        <label for="node-input-startupTimeout"><i class="fa fa-clock-o"></i> Startup Timeout (ms)</label>
-        <input type="text" id="node-input-startupTimeout" placeholder="120000">
+        <label for="node-config-input-startupTimeout"><i class="fa fa-clock-o"></i> Startup Timeout (ms)</label>
+        <input type="text" id="node-config-input-startupTimeout" placeholder="120000">
         <div class="form-tip">Time to wait for the Python environment to start (default: 120000ms)</div>
     </div>
 </script>
@@ -55,6 +48,7 @@ RED.nodes.registerType('python-workspace',{
 <script type="text/html" data-help-name="python-workspace">
     <p>Configuration node for a Python workspace.</p>
     <p>Specify the package dependencies (with optional versions) needed for your Python code. Each workspace is a reproducible Python environment that runs the same on any machine.</p>
+    <p><b>Environment</b> should be left to its default value in most cases.</p>
     <p>The node will internally set up a Python environment with these dependencies and start a worker process to execute Python functions.</p>
     <p><b>Note:</b> This is a configuration node. It will not appear as a node in your flows but can be referenced by python-function and python-run nodes.</p>
     <p><b>Dependency format:</b> One package per line, optionally with version specifiers. Examples: <code>python=3.9</code>, <code>numpy</code>, <code>pandas&gt;=2.0</code></p>

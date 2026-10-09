@@ -35,6 +35,13 @@ COPY CONTRIBUTING.md /data/node-red-node-red-python-tasks/
 
 # The entrypoint script will create the symlink from node_modules to the mounted package
 
+
+# Fix for glibc version issues in Alpine Linux
+# see https://github.com/prefix-dev/pixi/issues/2694
+ENV CONDA_OVERRIDE_GLIBC=2.17
+# Install glibc compatibility for pixi-installed Python binaries
+RUN apk add --no-cache libc6-compat
+
 # Switch back to the node-red user
 USER node-red
 
@@ -43,6 +50,7 @@ ENV HOME=/data
 
 # Switch to the Node-RED working directory
 WORKDIR /data
+
 
 # Use the custom entrypoint
 ENTRYPOINT ["/usr/src/node-red/entrypoint.sh"]

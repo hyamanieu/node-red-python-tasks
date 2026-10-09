@@ -53,6 +53,7 @@ module.exports = function(RED) {
      */
     PythonWorkspaceNode.prototype.validateConfig = async function() {
         // Check if dependencies are provided
+        this.warn(`Validating workspace configuration for environment ${this.environment} with dependencies: ${this.dependencies}`);
         if (!this.dependencies || this.dependencies.trim().length === 0) {
             this.error(RED._('python-workspace.errors.noDependencies') || 'At least one dependency is required');
             this.workerStatus = 'error';
@@ -68,14 +69,16 @@ module.exports = function(RED) {
             return false;
         }
 
+    this.warn(`Creating project dir for environment ${this.environment} with dependencies: ${this.dependencies} (${deps.join(', ')})`);
         try {
             // Create or update the environment's workspace, keyed by this
             // node's stable id so it survives restarts and redeploys
             this.projectDir = await ProjectManager.createProject(this.id, deps);
+            this.warn(`Workspace created/updated at ${this.projectDir} for environment ${this.environment} with dependencies: ${deps.join(', ')}`);
             this.workerStatus = 'valid';
             return true;
         } catch (err) {
-            this.error(RED._('python-workspace.errors.projectCreationFailed') || `Failed to create project: ${err.message}`);
+            this.error((RED._('python-workspace.errors.projectCreationFailed') || 'Failed to create project') + ': ' + err.message);
             this.workerStatus = 'error';
             return false;
         }

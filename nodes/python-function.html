@@ -16,11 +16,6 @@ RED.nodes.registerType('python-function',{
         return this.name || "Python Function";
     },
     oneditprepare: function() {
-        // Configure workspace as a config node selector
-        $('#node-input-workspace').typedInput({
-            type: 'python-workspace',
-            types: ['python-workspace']
-        });
         
         // Configure timeout as number
         $('#node-input-timeout').typedInput({

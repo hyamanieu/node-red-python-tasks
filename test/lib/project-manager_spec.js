@@ -292,6 +292,18 @@ describe('ProjectManager', function() {
             expect(ProjectManager.reconcileFlows(null, [])).to.be.null;
             expect(ProjectManager.reconcileFlows('nope', [])).to.equal('nope');
         });
+
+        it('should leave config nodes without a workspace folder untouched (one-directional)', function() {
+            // reconciliation goes folders -> config nodes only: a node whose
+            // folder is missing is kept (it recreates the folder on deploy),
+            // never removed — otherwise an unmounted workspaces volume would
+            // delete all workspace nodes
+            const flows = [
+                { id: 'tab-1', type: 'tab' },
+                { id: 'node-1', type: 'python-workspace', name: 'gone', dependencies: 'numpy' }
+            ];
+            expect(ProjectManager.reconcileFlows(flows, [])).to.deep.equal(flows);
+        });
     });
 
     describe('reconcileFlowsFile', function() {
@@ -361,6 +373,45 @@ describe('ProjectManager', function() {
                 expect(ProjectManager.reconcileFlowsFile({ userDir, flowFile: 'test-flows.json' }).added).to.equal(0);
             } finally {
                 fs.rmSync(userDir, { recursive: true, force: true });
+            }
+        });
+    });
+
+    describe('isWorkspaceOwner', function() {
+        it('should match by the metadata node id', function() {
+            const ws = path.join(rootDir, 'my-env');
+            fs.mkdirSync(ws, { recursive: true });
+            fs.writeFileSync(path.join(ws, 'pixi.toml'), '[project]\n');
+            fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(ws), JSON.stringify({ id: 'node-1', name: 'my-env' }));
+
+            expect(ProjectManager.isWorkspaceOwner(ws, 'node-1', 'my-env', [])).to.be.true;
+            expect(ProjectManager.isWorkspaceOwner(ws, 'node-2', 'my-env', [])).to.be.false;
+        });
+
+        it('should match legacy and name-derived folders without metadata', function() {
+            const legacy = path.join(rootDir, 'node-red-python-workspace-legacy1');
+            fs.mkdirSync(legacy, { recursive: true });
+            fs.writeFileSync(path.join(legacy, 'pixi.toml'), '[project]\n');
+            expect(ProjectManager.isWorkspaceOwner(legacy, 'legacy1', 'whatever', [])).to.be.true;
+            expect(ProjectManager.isWorkspaceOwner(legacy, 'other', 'whatever', [])).to.be.false;
+
+            const named = path.join(rootDir, 'My-Env');
+            fs.mkdirSync(named, { recursive: true });
+            fs.writeFileSync(path.join(named, 'pixi.toml'), '[project]\n');
+            expect(ProjectManager.isWorkspaceOwner(named, 'any-node', 'My Env', [])).to.be.true;
+            expect(ProjectManager.isWorkspaceOwner(named, 'any-node', 'Other', [])).to.be.false;
+        });
+
+        it('should refuse folders outside the pixi root and empty input', function() {
+            const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'outside-'));
+            fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(outside), JSON.stringify({ id: 'node-1' }));
+            try {
+                expect(ProjectManager.isWorkspaceOwner(outside, 'node-1', 'x', [])).to.be.false;
+                expect(ProjectManager.isWorkspaceOwner(rootDir, 'node-1', 'x', [])).to.be.false;
+                expect(ProjectManager.isWorkspaceOwner(null, 'node-1', 'x', [])).to.be.false;
+                expect(ProjectManager.isWorkspaceOwner(path.join(rootDir, 'ws'), '', 'x', [])).to.be.false;
+            } finally {
+                fs.rmSync(outside, { recursive: true, force: true });
             }
         });
     });

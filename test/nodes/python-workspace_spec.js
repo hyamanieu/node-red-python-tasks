@@ -227,24 +227,96 @@ describe('python-workspace node', function() {
     });
 
     describe('cleanup', function() {
-        it('should call done callback on cleanup', async function() {
-            stubCreateProject([]);
-            stubWorkerStart();
-
+        function makeNode(id, name) {
             RED = createMockRED({});
             workspaceNodeModule(RED);
-            const node = new constructors['python-workspace']({
-                id: 'node-cleanup',
-                name: 'Cleanup Env',
+            return new constructors['python-workspace']({
+                id: id,
+                name: name,
                 dependencies: 'numpy',
                 environment: 'default'
             });
+        }
+
+        it('should call done callback on cleanup and keep the workspace on redeploy (removed=false)', async function() {
+            stubCreateProject([]);
+            stubWorkerStart();
+            const node = makeNode('node-cleanup', 'Cleanup Env');
             await settle(node);
+            const dir = node.projectDir;
+            expect(fs.existsSync(dir)).to.be.true;
 
             await new Promise(function(resolve) {
-                node.cleanup(resolve);
+                node.cleanup(false, resolve);
             });
             expect(node.workerStatus).to.equal('stopped');
+            // redeploy keeps the environment folder
+            expect(fs.existsSync(dir)).to.be.true;
+        });
+
+        it('should delete the workspace folder when the node is removed (removed=true)', async function() {
+            stubCreateProject([]);
+            stubWorkerStart();
+            const node = makeNode('node-delete', 'Delete Env');
+            await settle(node);
+            const dir = node.projectDir;
+            expect(fs.existsSync(dir)).to.be.true;
+
+            await new Promise(function(resolve) {
+                node.cleanup(true, resolve);
+            });
+            expect(node.workerStatus).to.equal('stopped');
+            // definitive removal: the environment folder is gone, so startup
+            // reconciliation will not recreate the config node
+            expect(fs.existsSync(dir)).to.be.false;
+        });
+
+        it('should keep the folder when another config node owns the workspace', async function() {
+            stubCreateProject([]);
+            stubWorkerStart();
+            const node = makeNode('node-notowner', 'Shared Env');
+            await settle(node);
+            const dir = node.projectDir;
+            // the workspace metadata belongs to a different node id
+            fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(dir),
+                JSON.stringify({ id: 'some-other-node', name: 'Shared Env', dependencies: ['numpy'] }));
+
+            await new Promise(function(resolve) {
+                node.cleanup(true, resolve);
+            });
+            expect(fs.existsSync(dir)).to.be.true;
+        });
+
+        it('should delete the workspace if the node is removed while it is still being created', async function() {
+            this.timeout(10000);
+            let resolveCreate;
+            ProjectManager.createProject = function() {
+                return new Promise(function(resolve) { resolveCreate = resolve; });
+            };
+            stubWorkerStart();
+            const node = makeNode('node-race', 'Race Env');
+
+            // user deletes the node while createProject is still in flight
+            await new Promise(function(resolve) {
+                node.cleanup(true, resolve);
+            });
+            expect(node.removed).to.be.true;
+
+            // the workspace creation completes afterwards
+            const dir = path.join(rootDir, 'Race-Env');
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, 'pixi.toml'), '[project]\n');
+            resolveCreate(dir);
+
+            const gone = await (async function() {
+                const deadline = Date.now() + 8000;
+                while (fs.existsSync(dir) && Date.now() < deadline) {
+                    await new Promise(resolve => setTimeout(resolve, 25));
+                }
+                return !fs.existsSync(dir);
+            })();
+            expect(gone).to.be.true;
+            expect(node.projectDir).to.be.null;
         });
     });
 });

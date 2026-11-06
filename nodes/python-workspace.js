@@ -55,9 +55,12 @@ module.exports = function(RED) {
             node.updateStatus();
         });
 
-        // Handle node close (redeploy or removal)
-        this.on('close', function(done) {
-            node.cleanup(done);
+        // Handle node close (redeploy or removal). Node-RED passes the
+        // `removed` flag to close callbacks that declare two parameters:
+        // removed=true only when the user deleted the node, false on
+        // redeploy and shutdown.
+        this.on('close', function(removed, done) {
+            node.cleanup(removed, done);
         });
     }
 
@@ -98,6 +101,14 @@ module.exports = function(RED) {
                 environment: this.environment,
                 startupTimeout: this.startupTimeout
             });
+            if (this.removed) {
+                // The node was deleted while the workspace was being created:
+                // remove the folder again so the environment is definitely gone
+                await ProjectManager.cleanupProject(this.projectDir);
+                this.projectDir = null;
+                this.workerStatus = 'stopped';
+                return false;
+            }
             this.warn(`Workspace created/updated at ${this.projectDir} for environment ${this.environment} with dependencies: ${deps.join(', ')}`);
             this.workerStatus = 'valid';
             return true;
@@ -243,9 +254,11 @@ module.exports = function(RED) {
 
     /**
      * Clean up resources
+     * @param {boolean} [removed] - true when the node was deleted (not just
+     *   redeployed or stopped); deleting the node deletes its environment
      * @param {Function} [done] - callback when done
      */
-    PythonWorkspaceNode.prototype.cleanup = async function(done) {
+    PythonWorkspaceNode.prototype.cleanup = async function(removed, done) {
         const cleanupDone = () => {
             if (done) {
                 done();
@@ -253,16 +266,31 @@ module.exports = function(RED) {
         };
 
         try {
+            if (removed) {
+                this.removed = true;
+            }
             if (this.workerManager) {
                 await this.workerManager.stop();
                 this.workerManager = null;
             }
-            
-            // The workspace is persistent and named after this node's name, so
-            // it is kept for reuse across restarts and redeploys; only the
-            // worker process is stopped here
+
+            if (removed && this.projectDir) {
+                // Deleting the config node deletes the environment: remove
+                // the workspace folder, but only if this node owns it (a
+                // different node with the same name may share the folder)
+                const deps = this.parseDependencies();
+                if (ProjectManager.isWorkspaceOwner(this.projectDir, this.id, this.name, deps)) {
+                    await ProjectManager.cleanupProject(this.projectDir);
+                    console.log(`[python-workspace] Deleted environment folder ${this.projectDir} (config node ${this.id} was removed)`);
+                } else {
+                    console.log(`[python-workspace] Keeping ${this.projectDir}: owned by another config node`);
+                }
+            }
+            // On redeploy/restart the workspace is persistent and named after
+            // this node's name, so it is kept for reuse; only the worker
+            // process is stopped above
             this.projectDir = null;
-            
+
             this.workerStatus = 'stopped';
             this.updateStatus();
             cleanupDone();

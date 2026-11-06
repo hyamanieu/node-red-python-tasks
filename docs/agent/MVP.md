@@ -86,6 +86,10 @@ Behaviour:
 - Launch exactly one worker process, lazily on first use or at deploy time (implementer's choice —
   document which).
 - Shut the worker down cleanly on node close and on redeploy. No orphaned processes.
+- Deleting the config node is definitive: on `close` with `removed=true`, the node deletes the
+  workspace folder it owns (guarded by the workspace metadata's node id), so the environment is
+  not resurrected by startup reconciliation. Redeploy/restart (`removed=false`) keeps the
+  folder.
 - Users do not need filesystem access to the Node-RED host; everything is managed internally.
 
 ### `python-function` (execution node)

@@ -119,6 +119,10 @@ Sources: `@node-red/registry/lib/util.js`, `@node-red/runtime/lib/index.js`,
 - **Config nodes are constructed before flow nodes**, and a `python-workspace` node stays in
   `initializing` until its async pixi setup resolves — execution nodes (`python-function`,
   `python-run`) must wait for the workspace's worker instead of erroring immediately.
+- **The `close` event tells deletion from redeploy**: a close callback that declares two
+  parameters is called as `function(removed, done)` (`nodes/Node.js` `close(removed)`);
+  `removed` is true only when the user deleted the node, false on redeploy/shutdown. Use it to
+  run destructive cleanup only on real deletion.
 
 ## pixi CLI gotchas (verified with pixi v0.81.0 in the container)
 
@@ -183,12 +187,19 @@ environment manager (pixi) is an implementation detail.
   (`runPixi`), workspace folder naming (`getWorkspaceName(name, deps)` — sanitized user-given
   name, dependency-hash fallback), creation/update (`createProject`), per-workspace metadata
   (`.node-red-workspace.json` via `saveWorkspaceMeta`/`readWorkspaceMeta`), discovery
-  (`listWorkspaces`), manifest dependency recovery (`parseDependenciesFromManifest`), and
-  flow-file reconciliation (`reconcileFlows`, `reconcileFlowsFile`, `getFlowsFilePath`).
-  The workspaces on disk are the source of truth for which environments exist.
+  (`listWorkspaces`), manifest dependency recovery (`parseDependenciesFromManifest`), ownership
+  (`isWorkspaceOwner`), removal (`cleanupProject`), and flow-file reconciliation
+  (`reconcileFlows`, `reconcileFlowsFile`, `getFlowsFilePath`).
+  Reconciliation is **one-directional: folders → config nodes**. The workspaces on disk are the
+  source of truth for which environments exist; every folder gets exactly one config node at
+  startup. Config nodes without a folder are never removed (an unmounted volume must not
+  delete nodes). Deletion works the other way at runtime: deleting the config node
+  (`close(removed=true)`) deletes its folder via `isWorkspaceOwner` + `cleanupProject`, so it
+  is not resurrected on the next start.
 - `nodes/python-workspace.js` is the config node: at module load it calls
   `ProjectManager.reconcileFlowsFile(RED.settings)` (guarded, never throws); on deploy it calls
-  `createProject(this.name, deps)` then `saveWorkspaceMeta(...)`, then starts one `WorkerManager`.
+  `createProject(this.name, deps)` then `saveWorkspaceMeta(...)`, then starts one `WorkerManager`;
+  on `close(removed, done)` with `removed=true` it deletes the workspace folder it owns.
 - `lib/worker.js` spawns and supervises the pixi worker process; `lib/protocol.js` is the
   JSON-lines framing. `nodes/python-function.js` and `nodes/python-run.js` are the execution
   nodes and only talk to the workspace's `WorkerManager`.
@@ -207,8 +218,6 @@ environment manager (pixi) is an implementation detail.
   (the suite hangs after printing its results).
 - pixi-dependent tests self-skip when pixi is unavailable; in the dev container pixi IS
   available, so the `pixi CLI integration` tests run for real.
-- Known pre-existing failure unrelated to workspace code: `test/lib/worker_spec.js`
-  "should process ready messages". Do not chase it.
 - Do not deploy flows through the running container's admin API (`POST /flows`) from an agent:
   it mutates shared runtime state and gets blocked by approval. Verify behaviour via unit tests,
   or by calling `ProjectManager` directly inside the container with a temp

@@ -49,7 +49,7 @@ RED.nodes.registerType('python-workspace',{
 <script type="text/html" data-help-name="python-workspace">
     <p>Configuration node for a Python workspace.</p>
     <p>Specify the package dependencies (with optional versions) needed for your Python code. Each workspace is a reproducible Python environment that runs the same on any machine.</p>
-    <p>The environment is stored on the Node-RED host in a folder named after the workspace <b>Name</b>. If Node-RED restarts on a recreated host (for example a container without a persistent flow file), each stored environment is restored as a configuration node automatically.</p>
+    <p>The environment is stored on the Node-RED host in a folder named after the workspace <b>Name</b>. If Node-RED restarts on a recreated host (for example a container without a persistent flow file), each stored environment is restored as a configuration node automatically. Deleting this configuration node deletes the stored environment for good.</p>
     <p><b>Environment</b> should be left to its default value in most cases.</p>
     <p>The node will internally set up a Python environment with these dependencies and start a worker process to execute Python functions.</p>
     <p><b>Note:</b> This is a configuration node. It will not appear as a node in your flows but can be referenced by python-function and python-run nodes.</p>

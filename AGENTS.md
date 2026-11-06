@@ -1,5 +1,50 @@
 # AGENTS.md
 
+This file guides coding agent to develop a new node-red library  called `node-red-python-tasks` as described in ./README.md.
+
+## Skills to develop new node-red nodes
+
+```
+.agents/skills/
+├── node-red-node-development/         # START HERE: workflow, principles, definition of done
+├── node-red-scaffold-node/            # generate a new node package (scripts/scaffold.js)
+├── node-red-runtime-js/               # the node's .js file (runtime behaviour)
+├── node-red-editor-ui/                # the node's .html file (editor, properties, help)
+├── node-red-config-and-credentials/   # config nodes + credentials
+├── node-red-packaging-publishing/     # package.json, README, examples, i18n, npm (scripts/validate-package.js)
+├── node-red-testing/                  # node-red-node-test-helper + local install
+└── node-red-subflow-module/           # packaging a subflow as an npm module
+```
+
+## How an agent should use the skills
+
+1. When asked to create or modify a Node-RED node, read
+   `.agents/skills/node-red-node-development/SKILL.md` first. It routes to the other skills.
+2. Load only the skill(s) relevant to the current step. Each `SKILL.md` links to deeper files in its
+   own `references/` folder; read those only when needed.
+3. Run bundled scripts rather than re-writing their logic:
+   - `node .agents/skills/node-red-scaffold-node/scripts/scaffold.js --help`
+   - `node .agents/skills/node-red-packaging-publishing/scripts/validate-package.js <package-dir>`
+4. Where a skill and the live official documentation disagree, the official documentation wins.
+   Report the discrepancy and propose a skill update.
+
+## Conventions for editing this repo
+
+- Skill folder name == `name` in frontmatter (lowercase letters, digits, hyphens).
+- Keep each `SKILL.md` under ~500 lines; move detail into `references/`.
+- `description` must say both *what* the skill does and *when* to use it.
+- Scripts must be dependency-free Node.js (>= 18) so they run anywhere Node-RED can.
+- Do not duplicate content between skills; link to the owning skill instead.
+
+## Tooling support
+
+Tools that read skills from a different directory can use a symlink, for example:
+
+```sh
+ln -s .agents/skills .claude/skills     # Claude Code
+ln -s ../.agents/skills .github/skills  # GitHub Copilot (if your version expects it)
+```
+
 ## Setup commands
 
 **Note:** For development and testing (Phase 1 and beyond), everything runs in containers. See Phase 0

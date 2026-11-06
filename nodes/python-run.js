@@ -1,7 +1,7 @@
 // python-run node - execute Python commands
 // Executes commands via pixi run
 
-const { spawn } = require('child_process');
+const childProcess = require('child_process');
 const path = require('path');
 
 module.exports = function(RED) {
@@ -24,6 +24,10 @@ module.exports = function(RED) {
 
         // Node status
         this.nodeStatus = 'initializing';
+
+        // Commands currently running, as {child, timer} records, so close can
+        // kill them instead of orphaning child processes
+        this.activeProcesses = new Set();
 
         // Validate configuration
         if (!this.workspaceNode || !this.workspaceNode.isValid()) {
@@ -109,23 +113,24 @@ module.exports = function(RED) {
             PYTHONPATH: path.join(__dirname, '..', 'python')
         };
 
-        console.log(`[python-run] Executing: ${pixiPath} ${pixiArgs.join(' ')} in ${projectDir}`);
+        node.log(`Executing: ${node.command} ${allArgs.join(' ')} in ${projectDir}`);
 
-        const childProcess = spawn(pixiPath, pixiArgs, {
+        const child = childProcess.spawn(pixiPath, pixiArgs, {
             cwd: projectDir,
             env,
             stdio: ['ignore', 'pipe', 'pipe']
         });
+        const record = { child, timer: null };
+        node.activeProcesses.add(record);
 
         // Set up timeout
         let timedOut = false;
         const timeoutMs = node.timeout === 0 ? 0 : node.timeout;
 
-        let timeoutHandle = null;
         if (timeoutMs > 0) {
-            timeoutHandle = setTimeout(() => {
+            record.timer = setTimeout(() => {
                 timedOut = true;
-                childProcess.kill();
+                child.kill();
                 const err = new Error(`Command timed out after ${timeoutMs}ms`);
                 err.name = 'TimeoutError';
                 node.error(err, msg);
@@ -138,17 +143,18 @@ module.exports = function(RED) {
         let stdout = '';
         let stderr = '';
 
-        childProcess.stdout.on('data', (data) => {
+        child.stdout.on('data', (data) => {
             stdout += data.toString();
         });
 
-        childProcess.stderr.on('data', (data) => {
+        child.stderr.on('data', (data) => {
             stderr += data.toString();
         });
 
-        childProcess.on('close', (code) => {
-            if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
+        child.on('close', (code) => {
+            node.activeProcesses.delete(record);
+            if (record.timer) {
+                clearTimeout(record.timer);
             }
 
             if (timedOut) {
@@ -173,9 +179,10 @@ module.exports = function(RED) {
             }
         });
 
-        childProcess.on('error', (err) => {
-            if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
+        child.on('error', (err) => {
+            node.activeProcesses.delete(record);
+            if (record.timer) {
+                clearTimeout(record.timer);
             }
 
             if (!timedOut) {
@@ -223,7 +230,16 @@ module.exports = function(RED) {
      * @param {Function} [done] - callback when done
      */
     PythonRunNode.prototype.cleanup = function(done) {
-        // Nothing special to clean up for this node
+        // Kill commands still running so no child process is left orphaned
+        // when the node is closed (redeploy or deletion)
+        for (const record of this.activeProcesses) {
+            if (record.timer) {
+                clearTimeout(record.timer);
+            }
+            record.child.kill();
+        }
+        this.activeProcesses.clear();
+
         if (done) {
             done();
         }

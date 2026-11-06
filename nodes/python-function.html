@@ -1,29 +1,31 @@
 <script type="text/javascript">
-RED.nodes.registerType('python-function',{
-    category: 'python',
-    color: '#306998',
-    defaults: {
-        name: {value: ''},
-        workspace: {type: 'python-workspace', required: true},
-        functionBody: {value: ''},
-        imports: {value: ''},
-        timeout: {value: 30000}
-    },
-    inputs: 1,
-    outputs: 1,
-    icon: "font-awesome/fa-code",
-    label: function() {
-        return this.name || "Python Function";
-    },
-    oneditprepare: function() {
-        
-        // Configure timeout as number
-        $('#node-input-timeout').typedInput({
-            type: 'num',
-            types: ['num']
-        });
-    }
-});
+(function() {
+    'use strict';
+    RED.nodes.registerType('python-function',{
+        category: 'python',
+        color: '#306998',
+        defaults: {
+            name: {value: ''},
+            workspace: {type: 'python-workspace', required: true},
+            functionBody: {value: ''},
+            imports: {value: ''},
+            timeout: {value: 30000}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "font-awesome/fa-code",
+        label: function() {
+            return this.name || "Python Function";
+        },
+        oneditprepare: function() {
+            // Configure timeout as number
+            $('#node-input-timeout').typedInput({
+                type: 'num',
+                types: ['num']
+            });
+        }
+    });
+}());
 </script>
 
 <script type="text/html" data-template-name="python-function">
@@ -38,7 +40,7 @@ RED.nodes.registerType('python-function',{
     </div>
     <div class="form-row">
         <label for="node-input-functionBody"><i class="fa fa-code"></i> Function Body</label>
-        <textarea type="text" id="node-input-functionBody" placeholder="return payload * 2" rows="10"></textarea>
+        <textarea id="node-input-functionBody" placeholder="return payload * 2" rows="10"></textarea>
         <div class="form-tip">Python code that processes the msg.payload. Use 'payload' as the input variable. Do not include 'def' or 'return' statements.</div>
     </div>
     <div class="form-row">
@@ -54,10 +56,19 @@ RED.nodes.registerType('python-function',{
 </script>
 
 <script type="text/html" data-help-name="python-function">
-    <p>Executes a Python function for each input message using a persistent worker process.</p>
-    <p><b>Function Body:</b> Enter Python code that uses <code>payload</code> as the input. The code should return the result.</p>
-    <p><b>Example:</b> <code>return payload * 2</code> will double the input value.</p>
-    <p><b>Pre-imported Modules:</b> Specify modules to import automatically (e.g., <code>numpy,pandas</code>). These will be available in your function without explicit import statements.</p>
-    <p><b>Persistent Worker:</b> A worker process is started once per Python workspace and reused for all function calls, providing low-latency execution.</p>
-    <p><b>Error Handling:</b> Python exceptions are caught and sent to catch nodes, with full type, message, and traceback information.</p>
+    <p>Executes a Python function for each input message using the workspace's persistent worker process.</p>
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">any</span></dt>
+        <dd>Passed to the function as the <code>payload</code> variable.</dd>
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">any</span></dt>
+        <dd>The function's return value. All other <code>msg</code> properties are preserved.</dd>
+    </dl>
+    <h3>Details</h3>
+    <p><b>Function Body:</b> Python code that uses <code>payload</code> as the input and returns the result, e.g. <code>return payload * 2</code>.</p>
+    <p><b>Pre-imported Modules:</b> Comma-separated modules imported before each call (e.g. <code>numpy,pandas</code>), available in the body without import statements.</p>
+    <p><b>Error Handling:</b> Python exceptions are reported via <code>node.error</code> with type, message and traceback, so <b>catch</b> nodes handle them.</p>
 </script>

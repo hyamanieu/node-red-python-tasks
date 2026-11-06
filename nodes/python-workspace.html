@@ -1,26 +1,28 @@
 <script type="text/javascript">
-RED.nodes.registerType('python-workspace',{
-    category: 'config',
-    color: '#306998',
-    defaults: {
-        name: {value: '', required: true},
-        dependencies: {value: '', required: true},
-        environment: {value: 'default'},
-        startupTimeout: {value: 120000, validate:RED.validators.number() }
-    },
-    icon: "font-awesome/fa-cog",
-    label: function() {
-        return this.name || "Python Workspace";
-    },
-    oneditprepare: function() {
-
-        // Configure timeout as number
-        $('#node-config-input-startupTimeout').typedInput({
-            type: 'num',
-            types: ['num']
-        });
-    }
-});
+(function() {
+    'use strict';
+    RED.nodes.registerType('python-workspace',{
+        category: 'config',
+        color: '#306998',
+        defaults: {
+            name: {value: '', required: true},
+            dependencies: {value: '', required: true},
+            environment: {value: 'default'},
+            startupTimeout: {value: 120000, validate:RED.validators.number() }
+        },
+        icon: "font-awesome/fa-cog",
+        label: function() {
+            return this.name || "Python Workspace";
+        },
+        oneditprepare: function() {
+            // Configure timeout as number
+            $('#node-config-input-startupTimeout').typedInput({
+                type: 'num',
+                types: ['num']
+            });
+        }
+    });
+}());
 </script>
 
 <script type="text/html" data-template-name="python-workspace">

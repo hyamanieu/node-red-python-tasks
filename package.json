@@ -1,9 +1,8 @@
 {
-  "name": "node-red-python-tasks",
+  "name": "@hyamanieu/node-red-python-tasks",
   "version": "0.1.0",
   "description": "Node-RED nodes for calling Python functions from your flows",
   "keywords": [
-    "node-red",
     "python",
     "pixi"
   ],
@@ -23,6 +22,7 @@
     "test": "mocha test/**/*_spec.js"
   },
   "node-red": {
+    "version": ">=4.0.0",
     "nodes": {
       "python-workspace": "nodes/python-workspace.js",
       "python-function": "nodes/python-function.js",
@@ -32,8 +32,7 @@
   "dependencies": {},
   "devDependencies": {
     "chai": "^4.3.7",
-    "mocha": "^10.2.0",
-    "node-red-node-test-helper": "^0.3.0"
+    "mocha": "^10.2.0"
   },
   "engines": {
     "node": ">=22.13.0"

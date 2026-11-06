@@ -9,12 +9,12 @@ if [ ! -d "node_modules" ]; then
     npm install --include=dev
 fi
 
-# Create symlink from node_modules to our package directory
+# Create symlink from node_modules to our package directory (scoped npm name)
 # The package directory is mounted from the host at /data/node-red-node-red-python-tasks
-if [ ! -L /data/node_modules/node-red-python-tasks ]; then
-    mkdir -p /data/node_modules
-    ln -sf /data/node-red-node-red-python-tasks /data/node_modules/node-red-python-tasks
-fi
+mkdir -p /data/node_modules/@hyamanieu
+ln -sfn /data/node-red-node-red-python-tasks /data/node_modules/@hyamanieu/node-red-python-tasks
+# Remove the legacy unscoped symlink from before the package was renamed
+rm -f /data/node_modules/node-red-python-tasks
 
 # Start Node-RED with the correct user directory
 # This matches the original Node-RED Docker image entrypoint

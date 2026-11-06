@@ -1,34 +1,31 @@
 <script type="text/javascript">
-RED.nodes.registerType('python-run',{
-    category: 'python',
-    color: '#306998',
-    defaults: {
-        name: {value: ''},
-        workspace: {type: 'python-workspace', required: true},
-        command: {value: '', required: true},
-        args: {value: ''},
-        timeout: {value: 30000}
-    },
-    inputs: 1,
-    outputs: 1,
-    icon: "font-awesome/fa-terminal",
-    label: function() {
-        return this.name || "Python Run";
-    },
-    oneditprepare: function() {
-        // Configure workspace as a config node selector
-        $('#node-input-workspace').typedInput({
-            type: 'python-workspace',
-            types: ['python-workspace']
-        });
-        
-        // Configure timeout as number
-        $('#node-input-timeout').typedInput({
-            type: 'num',
-            types: ['num']
-        });
-    }
-});
+(function() {
+    'use strict';
+    RED.nodes.registerType('python-run',{
+        category: 'python',
+        color: '#306998',
+        defaults: {
+            name: {value: ''},
+            workspace: {type: 'python-workspace', required: true},
+            command: {value: '', required: true},
+            args: {value: ''},
+            timeout: {value: 30000}
+        },
+        inputs: 1,
+        outputs: 1,
+        icon: "font-awesome/fa-terminal",
+        label: function() {
+            return this.name || "Python Run";
+        },
+        oneditprepare: function() {
+            // Configure timeout as number
+            $('#node-input-timeout').typedInput({
+                type: 'num',
+                types: ['num']
+            });
+        }
+    });
+}());
 </script>
 
 <script type="text/html" data-template-name="python-run">
@@ -59,15 +56,17 @@ RED.nodes.registerType('python-run',{
 </script>
 
 <script type="text/html" data-help-name="python-run">
-    <p>Executes a Python command inside the selected workspace for each input message.</p>
-    <p><b>Command:</b> The command name to execute. This will be resolved via the PATH in the workspace's Python environment.</p>
-    <p><b>Fixed Arguments:</b> Optional arguments that are always passed to the command.</p>
-    <p><b>Payload Handling:</b></p>
-    <ul>
-        <li>If <code>msg.payload</code> is an <b>array</b>, each element becomes a positional argument (stringified)</li>
-        <li>If <code>msg.payload</code> is an <b>object</b>, it is passed as a single JSON string</li>
-        <li>Otherwise, the payload is stringified and passed as a single argument</li>
-    </ul>
-    <p><b>Output:</b> The command's stdout (trimmed) is set as <code>msg.payload</code>.</p>
-    <p><b>Error Handling:</b> Non-zero exit codes produce errors catchable by catch nodes.</p>
+    <p>Executes a command inside the selected Python environment for each input message.</p>
+    <h3>Inputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">any</span></dt>
+        <dd>Becomes command arguments: an <b>array</b> is passed element-wise (stringified), an <b>object</b> as a single JSON string, anything else as one stringified argument. Fixed arguments are prepended.</dd>
+    </dl>
+    <h3>Outputs</h3>
+    <dl class="message-properties">
+        <dt>payload <span class="property-type">string</span></dt>
+        <dd>The command's stdout (trimmed). All other <code>msg</code> properties are preserved.</dd>
+    </dl>
+    <h3>Details</h3>
+    <p><b>Command:</b> Resolved via the PATH of the workspace's Python environment. <b>Timeout:</b> per-call, in ms; 0 disables. Non-zero exit codes and timeouts are reported via <code>node.error</code>, so <b>catch</b> nodes handle them.</p>
 </script>

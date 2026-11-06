@@ -70,7 +70,6 @@ module.exports = function(RED) {
      */
     PythonWorkspaceNode.prototype.validateConfig = async function() {
         // Check if dependencies are provided
-        this.warn(`Validating workspace configuration for environment ${this.environment} with dependencies: ${this.dependencies}`);
         if (!this.dependencies || this.dependencies.trim().length === 0) {
             this.error(RED._('python-workspace.errors.noDependencies', { defaultValue: 'At least one dependency is required' }));
             this.workerStatus = 'error';
@@ -86,7 +85,6 @@ module.exports = function(RED) {
             return false;
         }
 
-    this.warn(`Creating project dir for environment ${this.environment} with dependencies: ${this.dependencies} (${deps.join(', ')})`);
         try {
             // Create or update the environment's workspace. The workspace
             // folder is named after the user-given name of this node and is
@@ -109,7 +107,7 @@ module.exports = function(RED) {
                 this.workerStatus = 'stopped';
                 return false;
             }
-            this.warn(`Workspace created/updated at ${this.projectDir} for environment ${this.environment} with dependencies: ${deps.join(', ')}`);
+            this.log(`Workspace ready at ${this.projectDir} (environment ${this.environment}, dependencies: ${deps.join(', ')})`);
             this.workerStatus = 'valid';
             return true;
         } catch (err) {
@@ -288,9 +286,9 @@ module.exports = function(RED) {
                 const deps = this.parseDependencies();
                 if (ProjectManager.isWorkspaceOwner(this.projectDir, this.id, this.name, deps)) {
                     await ProjectManager.cleanupProject(this.projectDir);
-                    console.log(`[python-workspace] Deleted environment folder ${this.projectDir} (config node ${this.id} was removed)`);
+                    this.log(`Deleted environment folder ${this.projectDir} (config node ${this.id} was removed)`);
                 } else {
-                    console.log(`[python-workspace] Keeping ${this.projectDir}: owned by another config node`);
+                    this.log(`Keeping ${this.projectDir}: owned by another config node`);
                 }
             }
             // On redeploy/restart the workspace is persistent and named after
@@ -306,10 +304,6 @@ module.exports = function(RED) {
             cleanupDone();
         }
     };
-    RED.nodes.registerType("python-workspace", PythonWorkspaceNode, {
-        credentials: {
-            // Future: may include credentials for private registries
-        }
-    });
+    RED.nodes.registerType("python-workspace", PythonWorkspaceNode);
 };
 

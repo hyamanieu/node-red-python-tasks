@@ -20,8 +20,6 @@ module.exports = function(RED) {
 
         // Get the workspace config node
         this.workspaceNode = RED.nodes.getNode(this.workspace);
-        
-        this.warn(`PythonFunctionNode created with workspace: ${this.workspace} with workspaceNode: ${this.workspaceNode ? this.workspaceNode.name : 'undefined'}, timeout: ${this.timeout}ms`);
 
         // Function identifier (based on node ID and function hash)
         this.functionId = `func_${this.id}`;

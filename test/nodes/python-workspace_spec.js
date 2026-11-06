@@ -4,190 +4,247 @@ const chai = require('chai');
 const expect = chai.expect;
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+
+const ProjectManager = require('../../lib/project-manager');
+const WorkerManager = require('../../lib/worker');
+const workspaceNodeModule = require('../../nodes/python-workspace');
 
 describe('python-workspace node', function() {
-    const testProjectDir = path.join(__dirname, '..', 'fixtures', 'pixi-project');
+    let rootDir;
+    let savedEnvDir;
+    let constructors;
     let RED;
-    let PythonEnvNode;
 
-    before(function() {
-        // Ensure test fixtures exist
-        if (!fs.existsSync(testProjectDir)) {
-            fs.mkdirSync(testProjectDir, { recursive: true });
-        }
-        
-        // Create a minimal pixi.toml
-        const pixiTomlPath = path.join(testProjectDir, 'pixi.toml');
-        if (!fs.existsSync(pixiTomlPath)) {
-            fs.writeFileSync(pixiTomlPath, `
-[project]
-name = "node-red-python-test"
-version = "0.1.0"
-description = "Test project"
-authors = []
-channels = ["conda-forge"]
-platforms = ["linux-64"]
+    // Stubs installed per-test so the node never spawns pixi in unit tests
+    const originalCreateProject = ProjectManager.createProject;
+    const originalStart = WorkerManager.prototype.start;
 
-[environments]
-default = []
-
-[tool.pixi.simple]
-pm = "pip"
-`);
-        }
-
-        // Load the node module
-        PythonEnvNode = require('../../nodes/python-workspace');
-
-        // Create mock RED
-        RED = {
+    function createMockRED(settings) {
+        constructors = {};
+        return {
             nodes: {
                 createNode: function(node, config) {
                     node.id = config.id || 'test-node-' + Date.now();
-                    node.log = console.log.bind(console);
-                    node.error = function(err, msg) {
-                        node.lastError = err;
+                    node.log = function() {};
+                    node.warn = function() {};
+                    node.error = function(err) {
+                        node.lastError = err && err.message ? err.message : String(err);
                     };
-                    node.warn = console.warn.bind(console);
-                    node.debug = console.log.bind(console);
-                    node.trace = console.log.bind(console);
+                    node.debug = function() {};
+                    node.trace = function() {};
                     node.send = function(msg) {
                         node.lastSent = msg;
                     };
                     node.status = function(status) {
                         node.lastStatus = status;
                     };
+                    node.on = function() {};
                     return node;
                 },
-                getNode: function(id) {
+                getNode: function() {
                     return null;
                 },
-                registerType: function(type, constructor, options) {
-                    // Just store it
+                registerType: function(type, constructor) {
+                    constructors[type] = constructor;
                 }
             },
+            settings: settings || {},
             _: function(key) {
                 return key;
             },
             log: {
-                info: console.log.bind(console),
-                warn: console.warn.bind(console),
-                error: console.error.bind(console)
+                info: function() {},
+                warn: function() {},
+                error: function() {}
             }
         };
-    });
+    }
 
-    describe('configuration validation', function() {
-        it('should accept valid configuration', function() {
-            const config = {
-                id: 'test-env-1',
-                name: 'Test Environment',
-                projectDir: testProjectDir,
-                environment: 'default',
-                startupTimeout: 120000
-            };
+    // Stub createProject so no pixi command runs; returns a workspace dir
+    function stubCreateProject(calls) {
+        ProjectManager.createProject = async function(name, deps) {
+            calls.push({ name, deps });
+            const dir = path.join(rootDir, ProjectManager.getWorkspaceName(name, deps));
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, 'pixi.toml'), '[project]\n');
+            return dir;
+        };
+    }
 
-            PythonEnvNode(RED);
-            const node = RED.nodes.createNode({ id: 'test-env-1' }, config);
-            
-            expect(node.isValid()).to.be.true;
-        });
+    function stubWorkerStart() {
+        WorkerManager.prototype.start = async function() {
+            this.status = 'ready';
+            this.notifyListeners('ready');
+        };
+    }
 
-        it('should reject empty project directory', function() {
-            const config = {
-                id: 'test-env-2',
-                name: 'Test Environment',
-                projectDir: '',
-                environment: 'default'
-            };
-
-            const node = RED.nodes.createNode({ id: 'test-env-2' }, config);
-            
-            expect(node.isValid()).to.be.false;
-            expect(node.workerStatus).to.equal('error');
-        });
-
-        it('should reject non-existent project directory', function() {
-            const config = {
-                id: 'test-env-3',
-                name: 'Test Environment',
-                projectDir: '/nonexistent/path',
-                environment: 'default'
-            };
-
-            const node = RED.nodes.createNode({ id: 'test-env-3' }, config);
-            
-            expect(node.isValid()).to.be.false;
-            expect(node.workerStatus).to.equal('error');
-        });
-
-        it('should reject directory without pixi.toml', function() {
-            const tempDir = path.join(testProjectDir, 'no-pixi-toml');
-            
-            if (!fs.existsSync(tempDir)) {
-                fs.mkdirSync(tempDir);
+    async function settle(node) {
+        // let the node's async validateConfig -> createWorkerManager -> start chain finish
+        for (let i = 0; i < 200; i++) {
+            await new Promise(resolve => setTimeout(resolve, 5));
+            if (node.workerStatus === 'ready' || node.workerStatus === 'error' || node.workerStatus === 'stopped') {
+                return;
             }
+        }
+    }
 
-            const config = {
-                id: 'test-env-4',
-                name: 'Test Environment',
-                projectDir: tempDir,
+    beforeEach(function() {
+        rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ws-node-test-'));
+        savedEnvDir = process.env.NODE_RED_PYTHON_ENV_DIR;
+        process.env.NODE_RED_PYTHON_ENV_DIR = rootDir;
+    });
+
+    afterEach(function() {
+        ProjectManager.createProject = originalCreateProject;
+        WorkerManager.prototype.start = originalStart;
+        if (savedEnvDir === undefined) {
+            delete process.env.NODE_RED_PYTHON_ENV_DIR;
+        } else {
+            process.env.NODE_RED_PYTHON_ENV_DIR = savedEnvDir;
+        }
+        fs.rmSync(rootDir, { recursive: true, force: true });
+    });
+
+    describe('workspace creation', function() {
+        it('should name the workspace folder after the user-given name and record metadata', async function() {
+            const calls = [];
+            stubCreateProject(calls);
+            stubWorkerStart();
+
+            RED = createMockRED({});
+            workspaceNodeModule(RED);
+            const node = new constructors['python-workspace']({
+                id: 'node-abc',
+                name: 'My Env',
+                dependencies: 'python=3.12\nnumpy',
+                environment: 'default',
+                startupTimeout: 120000
+            });
+            await settle(node);
+
+            expect(calls).to.have.lengthOf(1);
+            expect(calls[0].name).to.equal('My Env');
+            expect(calls[0].deps).to.deep.equal(['python=3.12', 'numpy']);
+            expect(node.projectDir).to.equal(path.join(rootDir, 'My-Env'));
+            expect(node.isValid()).to.be.true;
+
+            const meta = ProjectManager.readWorkspaceMeta(node.projectDir);
+            expect(meta.id).to.equal('node-abc');
+            expect(meta.name).to.equal('My Env');
+            expect(meta.dependencies).to.deep.equal(['python=3.12', 'numpy']);
+            expect(meta.environment).to.equal('default');
+        });
+
+        it('should reject empty dependencies without creating a workspace', async function() {
+            const calls = [];
+            stubCreateProject(calls);
+            stubWorkerStart();
+
+            RED = createMockRED({});
+            workspaceNodeModule(RED);
+            const node = new constructors['python-workspace']({
+                id: 'node-empty',
+                name: 'Empty',
+                dependencies: '  \n ',
                 environment: 'default'
-            };
+            });
+            await settle(node);
 
-            const node = RED.nodes.createNode({ id: 'test-env-4' }, config);
-            
+            expect(calls).to.have.lengthOf(0);
             expect(node.isValid()).to.be.false;
             expect(node.workerStatus).to.equal('error');
         });
     });
 
-    describe('worker manager creation', function() {
-        it('should create worker manager for valid config', function() {
-            const config = {
-                id: 'test-env-5',
-                name: 'Test Environment',
-                projectDir: testProjectDir,
-                environment: 'default',
-                startupTimeout: 120000
-            };
+    describe('startup reconciliation', function() {
+        it('should represent each on-disk workspace exactly once as a config node in the flow file', function() {
+            // A workspace that exists on disk (created before a host restart),
+            // with its metadata file, but missing from the flow file
+            const wsDir = path.join(rootDir, 'restored-env');
+            fs.mkdirSync(wsDir, { recursive: true });
+            fs.writeFileSync(path.join(wsDir, 'pixi.toml'), '[project]\n');
+            fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(wsDir), JSON.stringify({
+                id: 'node-old',
+                name: 'restored-env',
+                dependencies: ['numpy']
+            }));
 
-            const node = RED.nodes.createNode({ id: 'test-env-5' }, config);
-            
-            // Give a moment for async initialization
-            setTimeout(() => {
-                expect(node.getWorkerManager()).to.not.be.null;
-            }, 100);
+            const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nr-userdir-'));
+            const flowsPath = path.join(userDir, 'test-flows.json');
+            fs.writeFileSync(flowsPath, JSON.stringify([{ id: 'tab-1', type: 'tab', label: 'Flow 1' }]));
+
+            try {
+                RED = createMockRED({ userDir, flowFile: 'test-flows.json' });
+                // loading the node module is what triggers the reconciliation
+                workspaceNodeModule(RED);
+
+                let flows = JSON.parse(fs.readFileSync(flowsPath, 'utf8'));
+                let nodes = flows.filter(n => n.type === 'python-workspace');
+                expect(nodes).to.have.lengthOf(1);
+                expect(nodes[0].id).to.equal('node-old');
+                expect(nodes[0].name).to.equal('restored-env');
+                expect(nodes[0].dependencies).to.equal('numpy');
+
+                // loading again must not duplicate the config node
+                workspaceNodeModule(RED);
+                flows = JSON.parse(fs.readFileSync(flowsPath, 'utf8'));
+                nodes = flows.filter(n => n.type === 'python-workspace');
+                expect(nodes).to.have.lengthOf(1);
+            } finally {
+                fs.rmSync(userDir, { recursive: true, force: true });
+            }
         });
 
-        it('should not create worker manager for invalid config', function() {
-            const config = {
-                id: 'test-env-6',
-                name: 'Test Environment',
-                projectDir: '/nonexistent/path',
-                environment: 'default'
-            };
+        it('should leave the flow file alone when every workspace is already represented', function() {
+            const wsDir = path.join(rootDir, 'my-env');
+            fs.mkdirSync(wsDir, { recursive: true });
+            fs.writeFileSync(path.join(wsDir, 'pixi.toml'), '[project]\n');
+            fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(wsDir), JSON.stringify({
+                id: 'node-1',
+                name: 'my-env',
+                dependencies: ['numpy']
+            }));
 
-            const node = RED.nodes.createNode({ id: 'test-env-6' }, config);
-            
-            expect(node.getWorkerManager()).to.be.null;
+            const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nr-userdir-'));
+            const flowsPath = path.join(userDir, 'test-flows.json');
+            const original = [
+                { id: 'tab-1', type: 'tab', label: 'Flow 1' },
+                { id: 'node-1', type: 'python-workspace', name: 'my-env', dependencies: 'numpy' }
+            ];
+            fs.writeFileSync(flowsPath, JSON.stringify(original));
+
+            try {
+                RED = createMockRED({ userDir, flowFile: 'test-flows.json' });
+                workspaceNodeModule(RED);
+
+                const flows = JSON.parse(fs.readFileSync(flowsPath, 'utf8'));
+                expect(flows).to.deep.equal(original);
+            } finally {
+                fs.rmSync(userDir, { recursive: true, force: true });
+            }
         });
     });
 
     describe('cleanup', function() {
-        it('should call done callback on cleanup', function(done) {
-            const config = {
-                id: 'test-env-7',
-                name: 'Test Environment',
-                projectDir: testProjectDir,
-                environment: 'default'
-            };
+        it('should call done callback on cleanup', async function() {
+            stubCreateProject([]);
+            stubWorkerStart();
 
-            const node = RED.nodes.createNode({ id: 'test-env-7' }, config);
-            
-            node.cleanup(function() {
-                done();
+            RED = createMockRED({});
+            workspaceNodeModule(RED);
+            const node = new constructors['python-workspace']({
+                id: 'node-cleanup',
+                name: 'Cleanup Env',
+                dependencies: 'numpy',
+                environment: 'default'
             });
+            await settle(node);
+
+            await new Promise(function(resolve) {
+                node.cleanup(resolve);
+            });
+            expect(node.workerStatus).to.equal('stopped');
         });
     });
 });

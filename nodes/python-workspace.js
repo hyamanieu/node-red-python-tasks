@@ -7,6 +7,20 @@ const WorkerManager = require('../lib/worker');
 const ProjectManager = require('../lib/project-manager');
 
 module.exports = function(RED) {
+    // Node modules are loaded before Node-RED reads the flows, so this is the
+    // place to make the on-disk workspaces count: every workspace folder under
+    // the Python environments directory is represented exactly once as a
+    // config node in the flow file, even if the host (e.g. a container) was
+    // recreated and the flow file lost them. Never let this break startup.
+    try {
+        const reconciled = ProjectManager.reconcileFlowsFile(RED.settings || {});
+        if (reconciled.added > 0) {
+            console.log(`[python-workspace] Restored ${reconciled.added} Python workspace configuration node(s) from existing environments on disk`);
+        }
+    } catch (err) {
+        console.warn(`[python-workspace] Could not reconcile environments with the flow file: ${err.message}`);
+    }
+
     /**
      * Python Workspace Configuration Node
      * Defines a Python workspace by listing dependencies, internally manages a pixi project
@@ -71,9 +85,19 @@ module.exports = function(RED) {
 
     this.warn(`Creating project dir for environment ${this.environment} with dependencies: ${this.dependencies} (${deps.join(', ')})`);
         try {
-            // Create or update the environment's workspace, keyed by this
-            // node's stable id so it survives restarts and redeploys
-            this.projectDir = await ProjectManager.createProject(this.id, deps);
+            // Create or update the environment's workspace. The workspace
+            // folder is named after the user-given name of this node and is
+            // persistent across restarts and redeploys.
+            this.projectDir = await ProjectManager.createProject(this.name, deps);
+            // Record which config node owns the workspace, so the workspace can
+            // be represented as a config node again if the flow file is lost
+            await ProjectManager.saveWorkspaceMeta(this.projectDir, {
+                id: this.id,
+                name: this.name,
+                dependencies: deps,
+                environment: this.environment,
+                startupTimeout: this.startupTimeout
+            });
             this.warn(`Workspace created/updated at ${this.projectDir} for environment ${this.environment} with dependencies: ${deps.join(', ')}`);
             this.workerStatus = 'valid';
             return true;
@@ -234,9 +258,9 @@ module.exports = function(RED) {
                 this.workerManager = null;
             }
             
-            // The workspace is persistent and keyed by its dependencies, so it
-            // is kept for reuse across restarts and redeploys; only the worker
-            // process is stopped here
+            // The workspace is persistent and named after this node's name, so
+            // it is kept for reuse across restarts and redeploys; only the
+            // worker process is stopped here
             this.projectDir = null;
             
             this.workerStatus = 'stopped';

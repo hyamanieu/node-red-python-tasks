@@ -76,8 +76,11 @@ Behaviour:
 
 - On deploy, the node internally creates or updates a persistent pixi workspace with the specified
   dependencies: `pixi init` for a new workspace, then `pixi add` so the installed environment converges
-  to the dependency list. Each environment (config node) owns one workspace folder, keyed by its node
-  id, which survives restarts and redeploys.
+  to the dependency list. Each environment (config node) owns one workspace folder, named after the
+  environment's user-given `name`, which survives restarts and redeploys. The workspaces on disk are
+  the source of truth: at startup (before flows are loaded) each workspace folder is reconciled into
+  the flow file so it is represented exactly once as a `python-workspace` config node, even if the host
+  was recreated and the flow file lost the nodes.
 - Install/resolve the environment (`pixi install`) before launching the worker. This can be slow on
   first run; the startup timeout must accommodate it.
 - Launch exactly one worker process, lazily on first use or at deploy time (implementer's choice —

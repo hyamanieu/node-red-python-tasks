@@ -141,6 +141,60 @@ pm = "pip"
         });
     });
 
+    describe('stop during startup (deleted config node)', function() {
+        // Regression: deleting a python-workspace config node runs close() ->
+        // stop() while start() is still awaiting the pixi install check. The
+        // in-flight start() must not spawn afterwards, and the resulting
+        // spawn ENOENT (the workspace folder is already deleted) must not
+        // schedule a restart loop.
+        const missingDir = path.join(__dirname, '..', 'fixtures', 'does-not-exist');
+
+        it('should not spawn or schedule restarts when stop() is called while start() is in flight', async function() {
+            const manager = new WorkerManager({ projectDir: missingDir, startupTimeout: 5000 });
+
+            const startPromise = manager.start();
+            await manager.stop();
+            await startPromise;
+
+            // give any stray error/backoff events time to fire
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            expect(manager.status).to.equal('stopped');
+            expect(manager.workerProcess).to.be.null;
+            expect(manager.backoffTimer).to.be.null;
+            expect(manager.restartCount).to.equal(0);
+        });
+
+        it('should ignore process error/exit events that arrive after stop()', async function() {
+            const manager = new WorkerManager({ projectDir: missingDir, startupTimeout: 5000 });
+            manager.status = 'starting';
+            await manager.stop();
+
+            manager.handleProcessError(new Error('spawn ENOENT'));
+            manager.handleProcessExit(null);
+
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            expect(manager.status).to.equal('stopped');
+            expect(manager.backoffTimer).to.be.null;
+            expect(manager.restartCount).to.equal(0);
+        });
+
+        it('should not fire a pending backoff restart after stop()', async function() {
+            const manager = new WorkerManager({ projectDir: missingDir, startupTimeout: 5000 });
+            manager.status = 'error';
+            manager.scheduleRestart();
+            expect(manager.backoffTimer).to.not.be.null;
+
+            await manager.stop();
+            await new Promise(resolve => setTimeout(resolve, 300)); // backoff was 200ms
+
+            expect(manager.backoffTimer).to.be.null;
+            expect(manager.restartCount).to.equal(1); // no second restart was scheduled
+            expect(manager.status).to.equal('stopped');
+        });
+    });
+
     describe('processIncoming', function() {
         it('should process ready messages', function(done) {
             const manager = new WorkerManager({ projectDir: testProjectDir });

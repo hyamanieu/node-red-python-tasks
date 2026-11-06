@@ -175,9 +175,16 @@ module.exports = function(RED) {
 
         const node = this;
         this.workerManager.start().then(function() {
+            if (node.removed) {
+                // The node was deleted while the worker was starting
+                return;
+            }
             node.workerStatus = 'ready';
             node.updateStatus();
         }).catch(function(err) {
+            if (node.removed) {
+                return;
+            }
             node.workerStatus = 'error';
             node.error((RED._('python-workspace.errors.workerStartFailed') || 'Worker start failed') + ': ' + err.message);
             node.updateStatus();

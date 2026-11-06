@@ -72,7 +72,7 @@ module.exports = function(RED) {
         // Check if dependencies are provided
         this.warn(`Validating workspace configuration for environment ${this.environment} with dependencies: ${this.dependencies}`);
         if (!this.dependencies || this.dependencies.trim().length === 0) {
-            this.error(RED._('python-workspace.errors.noDependencies') || 'At least one dependency is required');
+            this.error(RED._('python-workspace.errors.noDependencies', { defaultValue: 'At least one dependency is required' }));
             this.workerStatus = 'error';
             return false;
         }
@@ -81,7 +81,7 @@ module.exports = function(RED) {
         const deps = this.parseDependencies();
         
         if (deps.length === 0) {
-            this.error(RED._('python-workspace.errors.invalidDependencies') || 'Invalid dependency specifications');
+            this.error(RED._('python-workspace.errors.invalidDependencies', { defaultValue: 'Invalid dependency specifications' }));
             this.workerStatus = 'error';
             return false;
         }
@@ -113,7 +113,7 @@ module.exports = function(RED) {
             this.workerStatus = 'valid';
             return true;
         } catch (err) {
-            this.error((RED._('python-workspace.errors.projectCreationFailed') || 'Failed to create project') + ': ' + err.message);
+            this.error((RED._('python-workspace.errors.projectCreationFailed', { defaultValue: 'Failed to create project' })) + ': ' + err.message);
             this.workerStatus = 'error';
             return false;
         }
@@ -186,7 +186,7 @@ module.exports = function(RED) {
                 return;
             }
             node.workerStatus = 'error';
-            node.error((RED._('python-workspace.errors.workerStartFailed') || 'Worker start failed') + ': ' + err.message);
+            node.error((RED._('python-workspace.errors.workerStartFailed', { defaultValue: 'Worker start failed' })) + ': ' + err.message);
             node.updateStatus();
         });
     };

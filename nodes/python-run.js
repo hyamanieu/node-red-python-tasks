@@ -27,10 +27,10 @@ module.exports = function(RED) {
 
         // Validate configuration
         if (!this.workspaceNode || !this.workspaceNode.isValid()) {
-            this.error(RED._('python-run.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+            this.error(RED._('python-run.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
             this.nodeStatus = 'error';
         } else if (!this.command) {
-            this.error(RED._('python-run.errors.noCommand') || 'Command is required');
+            this.error(RED._('python-run.errors.noCommand', { defaultValue: 'Command is required' }));
             this.nodeStatus = 'error';
         } else {
             this.nodeStatus = 'ready';
@@ -57,13 +57,13 @@ module.exports = function(RED) {
 
         // Check if we have a valid environment
         if (!node.workspaceNode || !node.workspaceNode.isValid()) {
-            const err = new Error(RED._('python-run.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+            const err = new Error(RED._('python-run.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
             node.error(err, msg);
             return;
         }
 
         if (!node.command) {
-            const err = new Error(RED._('python-run.errors.noCommand') || 'Command is required');
+            const err = new Error(RED._('python-run.errors.noCommand', { defaultValue: 'Command is required' }));
             node.error(err, msg);
             return;
         }

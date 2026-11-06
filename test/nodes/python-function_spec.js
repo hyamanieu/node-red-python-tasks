@@ -18,8 +18,9 @@ describe('python-function node', function() {
                     node.id = config.id || 'func-node-1';
                     node.log = function() {};
                     node.warn = function() {};
-                    node.error = function(err) {
+                    node.error = function(err, msg) {
                         node.lastError = err && err.message ? err.message : String(err);
+                        node.lastErrorMsg = msg;
                         node.errorCount = (node.errorCount || 0) + 1;
                     };
                     node.debug = function() {};
@@ -40,8 +41,8 @@ describe('python-function node', function() {
                     constructors[type] = constructor;
                 }
             },
-            _: function(key) {
-                return key;
+            _: function(key, opts) {
+                return (opts && opts.defaultValue) || key;
             },
             log: {
                 info: function() {},
@@ -173,5 +174,69 @@ describe('python-function node', function() {
         const defined = await waitFor(() => manager.defined.length > 0);
         expect(defined).to.be.true;
         expect(node.isFunctionDefined).to.be.true;
+    });
+
+    it('should fail input messages with the define error instead of queueing when the import is missing', async function() {
+        this.timeout(15000);
+        const manager = workspaceNode.manager;
+        workspaceNode.manager = null;
+
+        // the worker accepts define calls but the import fails, like
+        // "No module named 'urllib3'" in an environment without urllib3
+        const importError = new Error("Failed to import urllib3: No module named 'urllib3'");
+        manager.defineFunction = async function() {
+            throw importError;
+        };
+
+        const node = new constructors['python-function'](makeConfig());
+
+        workspaceNode.manager = manager;
+        workspaceNode.workerStatus = 'ready';
+        manager.ready = true;
+        manager.notify('ready', { op: 'ready', protocol: 1, python: '3.13.18' });
+
+        const failed = await waitFor(() => node.nodeStatus === 'error');
+        expect(failed).to.be.true;
+        expect(node.defineError).to.equal(importError);
+        expect(node.isFunctionDefined).to.be.false;
+        expect(node.lastStatus).to.deep.equal({ fill: 'red', shape: 'dot', text: 'Error' });
+        // the define failure itself is logged with a readable message
+        expect(node.lastError).to.contain('Failed to define function: ');
+        expect(node.lastError).to.contain("No module named 'urllib3'");
+
+        // an input message must reach node.error(err, msg) (catchable),
+        // not be queued behind a yellow "messages queued" status
+        const msg = { payload: 'hello' };
+        const errorsBefore = node.errorCount;
+        node.handleInput(msg);
+
+        expect(node.errorCount).to.equal(errorsBefore + 1);
+        expect(node.lastErrorMsg).to.equal(msg);
+        expect(node.lastError).to.contain("No module named 'urllib3'");
+        expect(node.pendingMessages).to.have.length(0);
+        expect(node.nodeStatus).to.equal('error');
+        expect(node.lastStatus).to.deep.equal({ fill: 'red', shape: 'dot', text: 'Error' });
+    });
+
+    it('should still queue messages while the worker is starting', async function() {
+        this.timeout(15000);
+        const manager = workspaceNode.manager;
+        workspaceNode.manager = null;
+
+        const node = new constructors['python-function'](makeConfig());
+
+        workspaceNode.manager = manager;
+        workspaceNode.workerStatus = 'starting';
+
+        const waiting = await waitFor(() => node.nodeStatus === 'waiting');
+        expect(waiting).to.be.true;
+
+        const msg = { payload: 1 };
+        node.handleInput(msg);
+
+        expect(node.pendingMessages).to.have.length(1);
+        expect(node.nodeStatus).to.equal('queued');
+        expect(node.lastStatus).to.deep.equal({ fill: 'yellow', shape: 'dot', text: 'Messages queued' });
+        expect(node.errorCount || 0).to.equal(0);
     });
 });

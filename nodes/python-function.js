@@ -29,6 +29,11 @@ module.exports = function(RED) {
         // Track if function is defined in worker
         this.isFunctionDefined = false;
 
+        // Error from defining the function in the worker (e.g. an import
+        // that is not installed in the environment). While set, incoming
+        // messages fail with this error instead of being queued.
+        this.defineError = null;
+
         // Pending messages queue (for when worker is not ready)
         this.pendingMessages = [];
 
@@ -38,7 +43,7 @@ module.exports = function(RED) {
         // Check if we have a workspace at all; if it exists but is still
         // initializing, wait for its worker instead of failing immediately
         if (!this.workspaceNode) {
-            this.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+            this.error(RED._('python-function.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
             this.nodeStatus = 'error';
         } else {
             // Wait for worker to be ready, then define function
@@ -65,7 +70,7 @@ module.exports = function(RED) {
 
         if (!node.workspaceNode) {
             node.nodeStatus = 'error';
-            node.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+            node.error(RED._('python-function.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
             node.updateStatus();
             return;
         }
@@ -86,13 +91,13 @@ module.exports = function(RED) {
                 node.attachToWorker(workerManager);
             } else if (node.workspaceNode.workerStatus === 'error') {
                 node.nodeStatus = 'error';
-                node.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+                node.error(RED._('python-function.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
                 node.updateStatus();
             } else if (Date.now() < deadline) {
                 setTimeout(waitForManager, 500);
             } else {
                 node.nodeStatus = 'error';
-                node.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+                node.error(RED._('python-function.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
                 node.updateStatus();
             }
         };
@@ -167,8 +172,11 @@ module.exports = function(RED) {
                 node.processPendingMessages();
             })
             .catch((err) => {
+                // Remember the failure: later input messages are failed with
+                // this error via node.error(err, msg) instead of being queued
+                node.defineError = err;
                 node.nodeStatus = 'error';
-                node.error((RED._('python-function.errors.defineFailed') || 'Failed to define function: ') + err.message);
+                node.error(new Error(RED._('python-function.errors.defineFailed', { defaultValue: 'Failed to define function: ' }) + err.message));
                 node.updateStatus();
             });
     };
@@ -180,8 +188,27 @@ module.exports = function(RED) {
     PythonFunctionNode.prototype.handleInput = function(msg) {
         const node = this;
 
+        // Defining the function failed (e.g. an imported library is not
+        // installed in the environment): fail the message with that error
+        // so catch nodes see it, instead of silently queueing it behind a
+        // yellow "messages queued" status
+        if (node.defineError) {
+            node.error(node.defineError, msg);
+            node.nodeStatus = 'error';
+            node.updateStatus();
+            return;
+        }
+
+        if (!node.workspaceNode) {
+            const err = new Error(RED._('python-function.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
+            node.error(err, msg);
+            node.nodeStatus = 'error';
+            node.updateStatus();
+            return;
+        }
+
         // If function not yet defined, queue the message
-        if (!node.isFunctionDefined || !node.workspaceNode || !node.workspaceNode.isValid()) {
+        if (!node.isFunctionDefined || !node.workspaceNode.isValid()) {
             node.pendingMessages.push(msg);
             node.nodeStatus = 'queued';
             node.updateStatus();

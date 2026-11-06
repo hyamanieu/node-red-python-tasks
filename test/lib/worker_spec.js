@@ -60,6 +60,27 @@ pm = "pip"
         });
     });
 
+    describe('buildWorkerArgs', function() {
+        it('should put the python -m after the executable, not pixi flags before it', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir, environment: 'default' });
+
+            // pixi run -e <env> python -m nrpyrun_worker:
+            // '-m' before the command would be pixi's --manifest-path and fail
+            // with "unable to canonicalize 'python'"
+            expect(manager.buildWorkerArgs()).to.deep.equal(
+                ['run', '-e', 'default', 'python', '-m', 'nrpyrun_worker']
+            );
+        });
+
+        it('should use the configured environment and python path', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir, environment: 'gpu', pythonPath: 'python3' });
+
+            expect(manager.buildWorkerArgs()).to.deep.equal(
+                ['run', '-e', 'gpu', 'python3', '-m', 'nrpyrun_worker']
+            );
+        });
+    });
+
     describe('status management', function() {
         it('should start with stopped status', function() {
             const manager = new WorkerManager({ projectDir: testProjectDir });
@@ -124,7 +145,9 @@ pm = "pip"
         it('should process ready messages', function(done) {
             const manager = new WorkerManager({ projectDir: testProjectDir });
             
-            manager.once('ready', (message) => {
+            // listeners are called as listener(event, ...args)
+            manager.once('ready', (event, message) => {
+                expect(event).to.equal('ready');
                 expect(message).to.deep.equal({
                     op: 'ready',
                     protocol: 1,

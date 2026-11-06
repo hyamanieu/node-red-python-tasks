@@ -35,8 +35,9 @@ module.exports = function(RED) {
         // Node status
         this.nodeStatus = 'initializing';
 
-        // Check if we have a valid environment
-        if (!this.workspaceNode || !this.workspaceNode.isValid()) {
+        // Check if we have a workspace at all; if it exists but is still
+        // initializing, wait for its worker instead of failing immediately
+        if (!this.workspaceNode) {
             this.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
             this.nodeStatus = 'error';
         } else {
@@ -62,18 +63,49 @@ module.exports = function(RED) {
     PythonFunctionNode.prototype.waitForWorkerReady = function() {
         const node = this;
 
-        if (!node.workspaceNode || !node.workspaceNode.isValid()) {
+        if (!node.workspaceNode) {
             node.nodeStatus = 'error';
+            node.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
             node.updateStatus();
             return;
         }
 
-        const workerManager = node.workspaceNode.getWorkerManager();
-        if (!workerManager) {
-            node.nodeStatus = 'error';
-            node.updateStatus();
-            return;
-        }
+        // The workspace node creates its worker manager asynchronously at
+        // deploy, so it may not exist yet when this node is constructed; poll
+        // until it appears (or the workspace fails) instead of erroring out
+        const timeoutMs = node.workspaceNode.startupTimeout || 120000;
+        const deadline = Date.now() + timeoutMs;
+        const waitForManager = function() {
+            if (!node.workspaceNode) {
+                node.nodeStatus = 'error';
+                node.updateStatus();
+                return;
+            }
+            const workerManager = node.workspaceNode.getWorkerManager();
+            if (workerManager) {
+                node.attachToWorker(workerManager);
+            } else if (node.workspaceNode.workerStatus === 'error') {
+                node.nodeStatus = 'error';
+                node.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+                node.updateStatus();
+            } else if (Date.now() < deadline) {
+                setTimeout(waitForManager, 500);
+            } else {
+                node.nodeStatus = 'error';
+                node.error(RED._('python-function.errors.invalidWorkspace') || 'Invalid Python workspace configuration');
+                node.updateStatus();
+            }
+        };
+        waitForManager();
+    };
+
+    /**
+     * Attach to the workspace's worker manager: define the function now if
+     * the worker is ready, otherwise when it emits 'ready'
+     * @param {WorkerManager} workerManager
+     */
+    PythonFunctionNode.prototype.attachToWorker = function(workerManager) {
+        const node = this;
 
         // Check if worker is already ready
         if (workerManager.isReady()) {
@@ -85,16 +117,16 @@ module.exports = function(RED) {
         node.nodeStatus = 'waiting';
         node.updateStatus();
 
-        workerManager.addListener(function(event, args) {
+        const listener = function(event, args) {
             if (event === 'ready') {
+                workerManager.removeListener(listener);
                 node.defineFunction();
-                // Remove this listener after first ready
-                workerManager.removeListener(arguments.callee);
             } else if (event === 'error') {
                 node.nodeStatus = 'error';
                 node.updateStatus();
             }
-        });
+        };
+        workerManager.addListener(listener);
     };
 
     /**

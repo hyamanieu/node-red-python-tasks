@@ -116,6 +116,24 @@ Sources: `@node-red/registry/lib/util.js`, `@node-red/runtime/lib/index.js`,
   deploy and keeps a `.flows.json.backup`.
 - **Editor visibility:** the editor reads the in-memory flow config via `GET /flows`; changes
   made to the flows file on disk appear after a process restart.
+- **Config nodes are constructed before flow nodes**, and a `python-workspace` node stays in
+  `initializing` until its async pixi setup resolves — execution nodes (`python-function`,
+  `python-run`) must wait for the workspace's worker instead of erroring immediately.
+
+## pixi CLI gotchas (verified with pixi v0.81.0 in the container)
+
+`pixi run --help` shows pixi owns the flags *before* the command: `-e/--environment`,
+`-m/--manifest-path`, `-x/--executable`. Therefore:
+
+- Never write `pixi run -e default -m python -m nrpyrun_worker`: the first `-m` is consumed by
+  pixi as `--manifest-path` and fails with `unable to canonicalize 'python'`. The worker is
+  spawned as `pixi run -e <env> python -m nrpyrun_worker` (python's own `-m` comes after the
+  executable). `lib/worker.js buildWorkerArgs()` builds this argv and is pinned by a test.
+- `python-run` uses `pixi run -e <env> -x <command> [args...]` so the command is executed
+  directly, not resolved as a pixi task.
+- To check a workspace manually:
+  `docker compose exec node-red bash -c 'cd /data/.node-red-python/workspaces/<name> && PYTHONPATH=/data/node-red-node-red-python-tasks/python pixi run -e default python -m nrpyrun_worker'`
+  should print `{"op": "ready", "protocol": 1, "python": "..."}`.
 
 ## What this project is
 

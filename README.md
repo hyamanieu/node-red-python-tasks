@@ -75,8 +75,8 @@ same definition you used locally.
 
 If you already maintain a `pixi.toml`, point the config node at it and it will be used as-is. If you
 do not, declare your dependencies in the node and one is generated for you. Either way, pixi is an
-implementation detail you are free to ignore — but it is also the reason the same flow can run
-unchanged on three very different machines.
+implementation detail you do not need to think about — but it is also the reason the same flow can
+run unchanged on three very different machines.
 
 Cloud execution is planned via [SkyPilot](https://skypilot.readthedocs.io/).
 
@@ -113,11 +113,13 @@ Not yet publishable. Once released:
 
 ```bash
 cd ~/.node-red
-npm install node-red-python-tasks
+npm install @hyamanieu/node-red-python-tasks
 ```
 
 [pixi](https://pixi.sh/latest/#installation) must be available on the host (or inside the container
-running Node-RED). It is a single static binary with no dependencies of its own.
+running Node-RED). It is a single static binary with no dependencies of its own, and installing this
+package with npm installs it automatically; if you copy the files by hand instead, install pixi
+yourself.
 
 ## Developer setup
 

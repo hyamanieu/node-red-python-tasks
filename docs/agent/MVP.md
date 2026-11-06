@@ -17,9 +17,12 @@ in a flow — not a prototype script.
 
 ## Terminology rule
 
-User-facing strings (node labels, editor help, error messages, status text) refer to **Python
-environments**. They do not mention pixi. Internal identifiers, code comments and this document may.
-The one exception: a field whose value is literally a path to a `pixi.toml` may name the file.
+User-facing strings (node type names, labels, editor help, error messages, status text) refer to
+**Python environments**, never "pixi-*" — that is why the config node is `python-workspace`. Users
+must not *need* to know pixi is used under the hood, but documentation (README "how it works",
+install prerequisites) may name it where it helps. The one naming exception: a field whose value is
+literally a path to a `pixi.toml` may name the file. Internal identifiers, code comments and this
+document may name pixi freely.
 
 ## Scope
 

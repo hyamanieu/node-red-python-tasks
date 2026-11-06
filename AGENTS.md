@@ -206,11 +206,16 @@ When a brief and this file disagree, this file wins on conventions; the brief wi
 ## Positioning rule
 
 The user-facing value proposition is "Python in your flows, anywhere, without a rewrite". The
-environment manager (pixi) is an implementation detail.
+environment manager (pixi) is an implementation detail: end users must not *need* to know it is
+there, but they *may* — do not hide it from anyone who looks.
 
-- User-facing strings — node labels, editor help, status text, error messages, README prose — say
-  "Python environment". They do not say "pixi", except where a field's value is literally a path to
-  a `pixi.toml`.
+- Naming and UI strings — node type names, palette labels, editor help, status text, error
+  messages — say "Python workspace" / "Python environment", never "pixi-*" (that is why the config
+  node is `python-workspace`, not `pixi-workspace`). A field whose value is literally a path to a
+  `pixi.toml` may name the file.
+- Documentation prose (README, docs) may name pixi wherever it aids understanding — e.g. the
+  "how it works" section and installation prerequisites. Do not scrub the word out of explanatory
+  text; the requirement is only that it is never load-bearing for using the package.
 - Code, comments, internal identifiers and `docs/agent/` may name pixi freely.
 - A user who has never heard of pixi must still be able to reach a working flow.
 

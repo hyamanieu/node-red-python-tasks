@@ -1,0 +1,122 @@
+[
+    {
+        "id": "tab_perf",
+        "type": "tab",
+        "label": "Throughput test",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "inj1",
+        "type": "inject",
+        "z": "tab_perf",
+        "name": "Start test",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 130,
+        "y": 100,
+        "wires": [
+            [
+                "gen1"
+            ]
+        ]
+    },
+    {
+        "id": "gen1",
+        "type": "function",
+        "z": "tab_perf",
+        "name": "Generate 1000 msgs",
+        "func": "const WORDS = [\n  \"apple\", \"river\", \"cloud\", \"tiger\", \"pencil\", \"mountain\", \"coffee\", \"window\",\n  \"garden\", \"rocket\", \"violin\", \"pepper\", \"harbor\", \"lantern\", \"marble\", \"thunder\",\n  \"orange\", \"puzzle\", \"shadow\", \"compass\", \"meadow\", \"button\", \"canyon\", \"whisper\"\n];\nconst TOTAL = 1000;\nconst batchId = Date.now();\n\nfor (let i = 1; i <= TOTAL; i++) {\n  const len = 4 + Math.floor(Math.random() * 7); // 4 to 10 inclusive\n  const arr = Array.from({ length: len }, () =>\n    WORDS[Math.floor(Math.random() * WORDS.length)]\n  );\n  node.send({ payload: arr, seq: i, total: TOTAL, batchId: batchId });\n}\n\nnode.status({ fill: \"blue\", shape: \"dot\", text: \"sent \" + TOTAL });\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 100,
+        "wires": [
+            [
+                "8bafa94af61dd648"
+            ]
+        ]
+    },
+    {
+        "id": "rcv1",
+        "type": "function",
+        "z": "tab_perf",
+        "name": "Collect stats",
+        "func": "const TIMEOUT_MS = 10000;\n\n// Ignore late messages from a batch that has already been reported (e.g. after a timeout)\nif (msg.batchId !== undefined && msg.batchId === context.get('doneBatch')) {\n  return null;\n}\n\nlet st = context.get('st');\nif (!st) {\n  st = {\n    batchId: msg.batchId,\n    expected: msg.total || 1000,\n    count: 0,\n    start: Date.now(),\n    last: Date.now(),\n    timer: null\n  };\n  st.timer = setTimeout(() => finish(true), TIMEOUT_MS);\n  context.set('st', st);\n  node.status({ fill: \"yellow\", shape: \"ring\", text: \"receiving...\" });\n}\n\nst.count++;\nst.last = Date.now();\n\nif (st.count >= st.expected) {\n  finish(false);\n}\nreturn null;\n\nfunction finish(timedOut) {\n  const s = context.get('st');\n  if (!s) return;\n  clearTimeout(s.timer);\n  context.set('doneBatch', s.batchId);\n  context.set('st', null);\n\n  const elapsedMs = s.last - s.start; // first message -> last message received\n  node.send({\n    payload: {\n      expected: s.expected,\n      received: s.count,\n      timedOut: timedOut,\n      elapsedMs: elapsedMs,\n      msgPerSec: elapsedMs > 0 ? Math.round(s.count / (elapsedMs / 1000)) : null,\n      note: timedOut ? \"Timed out after \" + (TIMEOUT_MS / 1000) + \"s\" : \"All messages received\"\n    }\n  });\n  node.status({\n    fill: timedOut ? \"red\" : \"green\",\n    shape: \"dot\",\n    text: s.count + \"/\" + s.expected + \" in \" + elapsedMs + \" ms\"\n  });\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 100,
+        "wires": [
+            [
+                "dbg1"
+            ]
+        ]
+    },
+    {
+        "id": "dbg1",
+        "type": "debug",
+        "z": "tab_perf",
+        "name": "Stats",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 750,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "8bafa94af61dd648",
+        "type": "python-function",
+        "z": "tab_perf",
+        "name": "Use toolz",
+        "workspace": "862d3654b058f00f",
+        "functionBody": "return toolz.frequencies(payload)",
+        "imports": "toolz",
+        "timeout": 30000,
+        "x": 440,
+        "y": 260,
+        "wires": [
+            [
+                "rcv1"
+            ]
+        ]
+    },
+    {
+        "id": "862d3654b058f00f",
+        "type": "python-workspace",
+        "name": "local-python",
+        "dependencies": "python=3.11\ntoolz",
+        "environment": "default",
+        "startupTimeout": 120000
+    },
+    {
+        "id": "79d6447f7994fcf6",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@hyamanieu/node-red-python-tasks": "0.1.0"
+        }
+    }
+]

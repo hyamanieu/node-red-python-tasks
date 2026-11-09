@@ -70,7 +70,7 @@ docker compose down
 ```
 
 The `compose.yml` file uses a custom Docker image (built from `Dockerfile`) that includes:
-- Node-RED 4.1.15 with Node.js 22
+- Node-RED 5
 - pixi v0.81.0 installed at `/usr/src/node-red/.pixi`
 - The `node-red-python-tasks` package installed in development mode
 - The repository mounted as a volume at `/data/node-red-node-red-python-tasks` for live code changes
@@ -136,7 +136,7 @@ Container facts (from `Dockerfile`, `entrypoint.sh`, `compose.yml`):
 - Match surrounding code style; do not reformat files you are not otherwise
   changing.
 
-## Node-RED runtime facts (verified against the container's Node-RED 4.1.15)
+## Node-RED runtime facts
 
 Sources: `@node-red/registry/lib/util.js`, `@node-red/runtime/lib/index.js`,
 `@node-red/runtime/lib/flows/util.js`, `@node-red/runtime/lib/storage/localfilesystem/projects/index.js`.

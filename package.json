@@ -33,7 +33,7 @@
   "devDependencies": {
     "chai": "^4.3.7",
     "mocha": "^10.2.0",
-    "node-red": "^4.1.15",
+    "node-red": "^5.0.9",
     "node-red-node-test-helper": "^0.3.0"
   },
   "engines": {

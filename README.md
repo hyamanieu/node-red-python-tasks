@@ -144,6 +144,13 @@ via the menu or `docker compose restart node-red`).
 
 To stop: `docker compose down`.
 
+The default image runs on Alpine Linux. Importing `numpy` or other libraries requiring c-compiled code requires another image based on Debian. You may try it and access it on port 1881 by using debian.Dockerfile:
+
+```bash
+docker build -f debian.Dockerfile -t node-red-python-tasks:debian .
+docker run --rm -d --name node-red-debian -p 1881:1880   -v nr-debian-data:/data   -v "$PWD:/data/node-red-node-red-python-tasks"   node-red-python-tasks:debian
+```
+
 ## Examples
 
 End-to-end examples — a full industrial stack with ingestion, storage and dashboards — live in a

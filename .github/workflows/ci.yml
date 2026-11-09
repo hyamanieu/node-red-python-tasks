@@ -1,0 +1,43 @@
+name: CI
+
+# This workflow replicates what a developer does locally with 
+#`docker compose exec node-red npm test`.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # Dependency-free Node script; ubuntu-latest runners ship Node >= 18.
+      - name: Validate package structure
+        run: node .agents/skills/node-red-packaging-publishing/scripts/validate-package.js .
+
+      - name: Build the dev container image
+        run: docker build -t node-red-python-tasks-ci .
+
+      # Run as root: the GitHub checkout is owned by the runner user, and the
+      # container must be able to write node_modules into the mounted repo.
+      # --ignore-scripts: pixi is already installed in the image at PIXI_HOME,
+      # so the package's preinstall (pixi bootstrap) is unnecessary here.
+      - name: Run the test suite in the container
+        timeout-minutes: 25
+        run: |
+          docker run --rm \
+            --user root \
+            -v "$GITHUB_WORKSPACE:/data/node-red-node-red-python-tasks" \
+            -w /data/node-red-node-red-python-tasks \
+            --entrypoint /bin/sh \
+            node-red-python-tasks-ci \
+            -c "npm install --include=dev --no-audit --no-fund --ignore-scripts && npm test"

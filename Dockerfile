@@ -1,7 +1,7 @@
 # Dockerfile for Node-RED with node-red-python-tasks development setup
 # Uses Node-RED 4.1.15 with Node.js 22 (Alpine Linux based)
 
-FROM nodered/node-red:4.1.15-22
+FROM nodered/node-red:5.0.9
 
 # Switch to root to perform installation
 USER root

@@ -6,6 +6,15 @@ without changing the flow.**
 > **Status: pre-alpha.** Nothing is published to npm yet. This repository is public early so the
 > design can be discussed in the open. See [ROADMAP.md](./ROADMAP.md) for the plan.
 
+**Roadmap status:**
+
+- [x] **Phase 0:** containerised development environment
+- [x] **Phase 1:** local execution (MVP) — call Python functions and commands from your flows
+- [ ] **Phase 2:** ergonomics
+- [ ] **Phase 3:** container execution
+- [ ] **Phase 4:** orchestrator-backed execution (optional)
+- [ ] **Phase 5:** cloud execution
+
 ## The idea
 
 Node-RED is very good at talking to the physical world: PLCs, serial buses, MQTT brokers, OPC-UA

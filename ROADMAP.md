@@ -40,10 +40,13 @@ environments are how that is achieved, not what is being sold. Concretely:
 - Hot-reload or symlink setup so code changes are picked up without container rebuild
 - Verification that the basic Node-RED + package install works in this setup
 
-**Definition of done:** a developer can clone the repository, run one command, and have a working
-Node-RED instance with both nodes available in the palette, ready for Phase 1 implementation.
+**Definition of done:**
 
-## Phase 1 — Local execution (MVP)
+- [x] Clone the repository and run one command (`docker compose up -d`) to get a working Node-RED
+  instance with this package installed in development mode
+- [x] The nodes are available in the palette of that instance, ready for Phase 1 implementation
+
+## Phase 1 — Local execution (MVP) ✅
 
 **Goal:** replace the `exec`-node pattern with something reproducible and fast, on a single host.
 
@@ -68,8 +71,20 @@ testing**, everything (including Node-RED) runs in containers as established in 
 - Worker supervision: restart on crash, backoff, clear node status.
 - Test suite with `node-red-node-test-helper`, and CI.
 
-**Definition of done:** a user can install the package, declare dependencies in the node UI, call a
-function from a flow at a few hundred messages per second, and leave it running for a week.
+**Definition of done:**
+
+- [x] Install the package into a `~/.node-red` directory; `python-workspace`, `python-function` and
+  `python-run` appear in the palette under a `python` category
+- [x] Declare dependencies in the node UI; the Python environment is created, resolved and installed
+  internally, with status reported in the editor — no filesystem access to the host needed
+- [x] Call a function from a flow at a few hundred messages per second:
+  `test/nodes/throughput_spec.js` runs `examples/throughput.json` in a real Node-RED runtime
+  (`node-red-node-test-helper`) — 1000 messages through `python-function` on a single worker at
+  ~3000 msg/s (threshold: 200 msg/s)
+- [x] Leave it running for a week: the worker is supervised (crash → restart with backoff), Python
+  exceptions and non-zero exit codes are catchable with a `catch` node, redeploy leaves no orphaned
+  processes; `npm test` passes (unit + `node-red-node-test-helper` runtime tests) and CI runs it on
+  every PR
 
 Implementation instructions: [docs/agent/MVP.md](./docs/agent/MVP.md).
 

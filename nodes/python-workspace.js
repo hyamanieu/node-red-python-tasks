@@ -93,8 +93,10 @@ module.exports = function(RED) {
         try {
             // Create or update the environment's workspace. The workspace
             // folder is named after the user-given name of this node and is
-            // persistent across restarts and redeploys.
-            this.projectDir = await ProjectManager.createProject(this.name, deps);
+            // persistent across restarts and redeploys. The node id lets
+            // createProject detect a rename: the previous folder is renamed
+            // instead of leaving an orphan behind.
+            this.projectDir = await ProjectManager.createProject(this.name, deps, { nodeId: this.id });
             // Record which config node owns the workspace, so the workspace can
             // be represented as a config node again if the flow file is lost
             await ProjectManager.saveWorkspaceMeta(this.projectDir, {

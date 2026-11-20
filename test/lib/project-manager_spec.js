@@ -100,6 +100,108 @@ describe('ProjectManager', function() {
         });
     });
 
+    describe('createProject rename (config node renamed)', function() {
+        // Never invoke the real pixi CLI in these tests
+        let originalRunPixi;
+        beforeEach(function() {
+            originalRunPixi = ProjectManager.runPixi;
+            ProjectManager.runPixi = async function() {};
+        });
+        afterEach(function() {
+            ProjectManager.runPixi = originalRunPixi;
+        });
+
+        function makeWorkspace(name, meta) {
+            const dir = path.join(rootDir, name);
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, 'pixi.toml'), '[project]\n');
+            if (meta) {
+                fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(dir), JSON.stringify(meta));
+            }
+            return dir;
+        }
+
+        it('should rename the existing workspace folder when the node name changes', async function() {
+            const oldDir = makeWorkspace('old-name', { id: 'node-1', name: 'old-name', dependencies: [] });
+
+            const projectDir = await ProjectManager.createProject('new-name', [], { nodeId: 'node-1' });
+
+            expect(projectDir).to.equal(path.join(rootDir, 'new-name'));
+            expect(fs.existsSync(oldDir)).to.be.false;
+            // the manifest and the metadata travel with the folder
+            expect(ProjectManager.hasManifest(projectDir)).to.be.true;
+            expect(ProjectManager.readWorkspaceMeta(projectDir).id).to.equal('node-1');
+        });
+
+        it('should rename a legacy node-id-named folder too', async function() {
+            const legacy = makeWorkspace('node-red-python-workspace-node-9', null);
+
+            const projectDir = await ProjectManager.createProject('renamed', [], { nodeId: 'node-9' });
+
+            expect(projectDir).to.equal(path.join(rootDir, 'renamed'));
+            expect(fs.existsSync(legacy)).to.be.false;
+            expect(ProjectManager.hasManifest(projectDir)).to.be.true;
+        });
+
+        it('should rename the hash-named folder when the deps of an unnamed environment change', async function() {
+            const depsV1 = ['python=3.13'];
+            const oldDir = makeWorkspace(ProjectManager.getWorkspaceName('', depsV1), { id: 'node-1', name: '' });
+
+            const depsV2 = ['python=3.13', 'numpy'];
+            const projectDir = await ProjectManager.createProject('', depsV2, { nodeId: 'node-1' });
+
+            expect(projectDir).to.equal(path.join(rootDir, ProjectManager.getWorkspaceName('', depsV2)));
+            expect(fs.existsSync(oldDir)).to.be.false;
+            expect(ProjectManager.hasManifest(projectDir)).to.be.true;
+        });
+
+        it('should leave everything alone when the name did not change', async function() {
+            const dir = makeWorkspace('same-name', { id: 'node-1', name: 'same-name' });
+
+            const projectDir = await ProjectManager.createProject('same-name', [], { nodeId: 'node-1' });
+
+            expect(projectDir).to.equal(dir);
+            expect(fs.existsSync(dir)).to.be.true;
+            expect(fs.readdirSync(rootDir)).to.deep.equal(['same-name']);
+        });
+
+        it('should not touch any folder when no nodeId is given', async function() {
+            const oldDir = makeWorkspace('old-name', { id: 'node-1', name: 'old-name' });
+            makeWorkspace('new-name', null); // pre-existing, so pixi init is not needed
+
+            const projectDir = await ProjectManager.createProject('new-name', []);
+
+            expect(projectDir).to.equal(path.join(rootDir, 'new-name'));
+            expect(fs.existsSync(oldDir)).to.be.true;
+        });
+
+        it('should remove the old folder instead of clobbering when the new folder already exists', async function() {
+            const oldDir = makeWorkspace('old-name', { id: 'node-1', name: 'old-name' });
+            const newDir = makeWorkspace('new-name', { id: 'node-2', name: 'new-name' });
+
+            const projectDir = await ProjectManager.createProject('new-name', [], { nodeId: 'node-1' });
+
+            expect(projectDir).to.equal(newDir);
+            expect(fs.existsSync(oldDir)).to.be.false;
+            expect(fs.existsSync(newDir)).to.be.true;
+            // the other node's metadata is untouched
+            expect(ProjectManager.readWorkspaceMeta(newDir).id).to.equal('node-2');
+        });
+
+        it('should not resurrect the old folder as a config node after the rename', async function() {
+            makeWorkspace('old-name', { id: 'node-1', name: 'old-name', dependencies: ['numpy'] });
+            await ProjectManager.createProject('new-name', [], { nodeId: 'node-1' });
+
+            // startup reconciliation: the renamed folder is represented exactly
+            // once, by the node that owns it
+            const flows = [{ id: 'node-1', type: 'python-workspace', name: 'new-name', dependencies: 'numpy' }];
+            const result = ProjectManager.reconcileFlows(flows, ProjectManager.listWorkspaces());
+
+            expect(result.filter(n => n.type === 'python-workspace')).to.have.lengthOf(1);
+            expect(result.find(n => n.type === 'python-workspace').id).to.equal('node-1');
+        });
+    });
+
     describe('workspace metadata', function() {
         it('should round-trip workspace metadata inside the workspace folder', async function() {
             const workspaceDir = path.join(rootDir, 'my-env');

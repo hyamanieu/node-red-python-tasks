@@ -63,8 +63,8 @@ describe('python-workspace node', function() {
 
     // Stub createProject so no pixi command runs; returns a workspace dir
     function stubCreateProject(calls) {
-        ProjectManager.createProject = async function(name, deps) {
-            calls.push({ name, deps });
+        ProjectManager.createProject = async function(name, deps, options) {
+            calls.push({ name, deps, options });
             const dir = path.join(rootDir, ProjectManager.getWorkspaceName(name, deps));
             fs.mkdirSync(dir, { recursive: true });
             fs.writeFileSync(path.join(dir, 'pixi.toml'), '[project]\n');
@@ -126,6 +126,8 @@ describe('python-workspace node', function() {
             expect(calls).to.have.lengthOf(1);
             expect(calls[0].name).to.equal('My Env');
             expect(calls[0].deps).to.deep.equal(['python=3.12', 'numpy']);
+            // the node id is passed so createProject can rename the folder on rename
+            expect(calls[0].options).to.deep.equal({ nodeId: 'node-abc' });
             expect(node.projectDir).to.equal(path.join(rootDir, 'My-Env'));
             expect(node.isValid()).to.be.true;
 

@@ -28,8 +28,7 @@
         "y": 300,
         "wires": [
             [
-                "36bf7a9b2779f858",
-                "da52ac877894ec43"
+                "36bf7a9b2779f858"
             ]
         ],
         "l": false
@@ -59,7 +58,7 @@
         "type": "python-function",
         "z": "0f6e7beb9ea06ca4",
         "name": "no-GIL 3.14",
-        "workspace": "3051f900f1c0a711",
+        "workspace": "d16a4698337f6af7",
         "functionBody": "duration = payload[0]['sleep']\nstart = time.perf_counter()\nit=0\nwhile time.perf_counter() - start < duration:\n    x = 12345 * 67890\n    it += 1\nreturn {\"duration\": payload[0]['ts'], \"py_version\": sysconfig.get_config_var(\"Py_GIL_DISABLED\"), \"iterations\":it}",
         "imports": "time, sys, sysconfig",
         "timeout": 30000,
@@ -195,7 +194,7 @@
         "id": "58cc21d4292a5961",
         "type": "python-function",
         "z": "0f6e7beb9ea06ca4",
-        "name": "GIL 3.14",
+        "name": "GIL 3.13",
         "workspace": "4d257f206ab387f3",
         "functionBody": "duration = payload[0]['sleep']\nstart = time.perf_counter()\nit=0\nwhile time.perf_counter() - start < duration:\n    x = 12345 * 67890\n    it += 1\nreturn {\"duration\": payload[0]['ts'], \"py_version\": sysconfig.get_config_var(\"Py_GIL_DISABLED\"), \"iterations\":it}",
         "imports": "time, sys, sysconfig",
@@ -309,7 +308,164 @@
         ]
     },
     {
-        "id": "3051f900f1c0a711",
+        "id": "997a89cbcfb9114c",
+        "type": "inject",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "[1..16].[{\"ts\":$millis(),\"sleep\": 1}]",
+        "payloadType": "jsonata",
+        "x": 145,
+        "y": 400,
+        "wires": [
+            [
+                "da52ac877894ec43"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "d1bc859badafc71b",
+        "type": "inject",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "[1..16].[{\"ts\":$millis(),\"sleep\": 1}]",
+        "payloadType": "jsonata",
+        "x": 135,
+        "y": 640,
+        "wires": [
+            [
+                "c651b50ff34e8e47",
+                "47c7e4a647ac112f"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "c651b50ff34e8e47",
+        "type": "python-function",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "no-GIL 3.14",
+        "workspace": "d16a4698337f6af7",
+        "functionBody": "current = threading.current_thread()\nmsg = {\"PID:\": os.getpid(),\n\"Parent PID\": os.getppid(),\n\"Process name\": multiprocessing.current_process().name,\n\"Parent process\": multiprocessing.parent_process().name if multiprocessing.parent_process() else None,\n\"Thread name\": current.name,\n\"Thread ID\": current.ident,\n\"Is main thread\": current is threading.main_thread()\n}\nreturn msg",
+        "imports": "multiprocessing, os, threading",
+        "timeout": 30000,
+        "x": 250,
+        "y": 560,
+        "wires": [
+            [
+                "1accc7395bfbf1c6"
+            ]
+        ]
+    },
+    {
+        "id": "47c7e4a647ac112f",
+        "type": "python-function",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "GIL 3.13",
+        "workspace": "4d257f206ab387f3",
+        "functionBody": "current = threading.current_thread()\nmsg = {\"PID:\": os.getpid(),\n\"Parent PID\": os.getppid(),\n\"Process name\": multiprocessing.current_process().name,\n\"Parent process\": multiprocessing.parent_process().name if multiprocessing.parent_process() else None,\n\"Thread name\": current.name,\n\"Thread ID\": current.ident,\n\"Is main thread\": current is threading.main_thread()\n}\nreturn msg",
+        "imports": "multiprocessing, os, threading",
+        "timeout": 30000,
+        "x": 240,
+        "y": 700,
+        "wires": [
+            [
+                "821dd808e3630eb3"
+            ]
+        ]
+    },
+    {
+        "id": "1accc7395bfbf1c6",
+        "type": "change",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "topic",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "no-GIL py314",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 410,
+        "y": 560,
+        "wires": [
+            [
+                "81dd85d8e7224086"
+            ]
+        ]
+    },
+    {
+        "id": "821dd808e3630eb3",
+        "type": "change",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "topic",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "GIL py313",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 410,
+        "y": 700,
+        "wires": [
+            [
+                "81dd85d8e7224086"
+            ]
+        ]
+    },
+    {
+        "id": "81dd85d8e7224086",
+        "type": "debug",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "debug 2",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 500,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "d16a4698337f6af7",
         "type": "python-workspace",
         "name": "py314",
         "dependencies": "python-freethreading=3.14",
@@ -325,7 +481,7 @@
         "startupTimeout": 120000
     },
     {
-        "id": "22eefe0c8ebf108d",
+        "id": "9fc95b604a92a2b8",
         "type": "global-config",
         "env": [],
         "modules": {

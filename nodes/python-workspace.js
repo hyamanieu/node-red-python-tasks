@@ -33,6 +33,11 @@ module.exports = function(RED) {
         this.dependencies = config.dependencies || '';
         this.environment = config.environment || 'default';
         this.startupTimeout = parseInt(config.startupTimeout) || 120000;
+        // How the worker executes calls: 'auto' lets the worker choose from
+        // the interpreter (threads on no-GIL builds, processes on GIL builds)
+        this.workerMode = ['auto', 'threads', 'processes', 'sequential'].includes(config.workerMode)
+            ? config.workerMode
+            : 'auto';
         
         // Internal: the generated project directory
         this.projectDir = null;
@@ -88,8 +93,10 @@ module.exports = function(RED) {
         try {
             // Create or update the environment's workspace. The workspace
             // folder is named after the user-given name of this node and is
-            // persistent across restarts and redeploys.
-            this.projectDir = await ProjectManager.createProject(this.name, deps);
+            // persistent across restarts and redeploys. The node id lets
+            // createProject detect a rename: the previous folder is renamed
+            // instead of leaving an orphan behind.
+            this.projectDir = await ProjectManager.createProject(this.name, deps, { nodeId: this.id });
             // Record which config node owns the workspace, so the workspace can
             // be represented as a config node again if the flow file is lost
             await ProjectManager.saveWorkspaceMeta(this.projectDir, {
@@ -97,7 +104,8 @@ module.exports = function(RED) {
                 name: this.name,
                 dependencies: deps,
                 environment: this.environment,
-                startupTimeout: this.startupTimeout
+                startupTimeout: this.startupTimeout,
+                workerMode: this.workerMode
             });
             if (this.removed) {
                 // The node was deleted while the workspace was being created:
@@ -147,7 +155,8 @@ module.exports = function(RED) {
         this.workerManager = new WorkerManager({
             projectDir: this.projectDir,
             environment: this.environment,
-            startupTimeout: this.startupTimeout
+            startupTimeout: this.startupTimeout,
+            workerMode: this.workerMode
         });
 
         // Set up worker event listeners

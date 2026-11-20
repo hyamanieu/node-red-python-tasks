@@ -57,6 +57,55 @@ pm = "pip"
 
             expect(manager.options.environment).to.equal('default');
             expect(manager.options.startupTimeout).to.equal(120000);
+            expect(manager.options.workerMode).to.equal('auto');
+        });
+
+        it('should store an explicit workerMode', function() {
+            const manager = new WorkerManager({
+                projectDir: testProjectDir,
+                workerMode: 'sequential'
+            });
+
+            expect(manager.options.workerMode).to.equal('sequential');
+        });
+    });
+
+    describe('buildWorkerEnv', function() {
+        let savedMode;
+
+        beforeEach(function() {
+            savedMode = process.env.NRPYRUN_WORKER_MODE;
+            delete process.env.NRPYRUN_WORKER_MODE;
+        });
+
+        afterEach(function() {
+            if (savedMode === undefined) {
+                delete process.env.NRPYRUN_WORKER_MODE;
+            } else {
+                process.env.NRPYRUN_WORKER_MODE = savedMode;
+            }
+        });
+
+        it('should set PYTHONPATH to the package python directory', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir });
+            const env = manager.buildWorkerEnv();
+
+            expect(env.PYTHONPATH).to.equal(path.join(__dirname, '..', '..', 'python'));
+        });
+
+        it('should not set NRPYRUN_WORKER_MODE for auto (the worker picks from the interpreter)', function() {
+            const manager = new WorkerManager({ projectDir: testProjectDir, workerMode: 'auto' });
+            expect(manager.buildWorkerEnv()).to.not.have.property('NRPYRUN_WORKER_MODE');
+
+            const defaultManager = new WorkerManager({ projectDir: testProjectDir });
+            expect(defaultManager.buildWorkerEnv()).to.not.have.property('NRPYRUN_WORKER_MODE');
+        });
+
+        it('should forward an explicit worker mode as NRPYRUN_WORKER_MODE', function() {
+            for (const mode of ['threads', 'processes', 'sequential']) {
+                const manager = new WorkerManager({ projectDir: testProjectDir, workerMode: mode });
+                expect(manager.buildWorkerEnv().NRPYRUN_WORKER_MODE).to.equal(mode);
+            }
         });
     });
 

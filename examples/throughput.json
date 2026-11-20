@@ -104,15 +104,26 @@
         ]
     },
     {
+        "id": "561461247d0a46dd",
+        "type": "comment",
+        "z": "tab_perf",
+        "name": "Faster with sequential execution",
+        "info": "Only if single flow using this workspace",
+        "x": 190,
+        "y": 40,
+        "wires": []
+    },
+    {
         "id": "862d3654b058f00f",
         "type": "python-workspace",
         "name": "local-python",
         "dependencies": "python=3.11\ntoolz",
         "environment": "default",
-        "startupTimeout": 120000
+        "startupTimeout": 120000,
+        "workerMode": "sequential"
     },
     {
-        "id": "79d6447f7994fcf6",
+        "id": "2592de8f4f489263",
         "type": "global-config",
         "env": [],
         "modules": {

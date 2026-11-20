@@ -226,7 +226,7 @@ there, but they *may* — do not hide it from anyone who looks.
   matching base names); shared runtime logic in `lib/`; the Python worker in `python/`.
 - **Dependencies:** no new runtime npm dependency without justification in the PR description. The
   package must stay light enough to install on a gateway.
-- **Tests:** `node-red-node-test-helper` with mocha, in `test/`. New behaviour needs a test.
+- **Tests:** `node-red-node-test-helper` with mocha, in `test/`. New behaviour needs a test. Pure-Python worker logic (`python/nrpyrun_worker`) is unit-tested with stdlib `unittest` in `python/tests/`, run by `npm test` via `scripts/run-python-tests.js` (skips when no `python3` on PATH); process-boundary behaviour stays in the mocha spawn specs.
 - **Commits:** logical units, meaningful messages. Do not squash an entire task into one commit.
 - **Style:** match the surrounding code. No reformatting of files you are not otherwise changing.
 

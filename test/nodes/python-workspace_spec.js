@@ -63,8 +63,8 @@ describe('python-workspace node', function() {
 
     // Stub createProject so no pixi command runs; returns a workspace dir
     function stubCreateProject(calls) {
-        ProjectManager.createProject = async function(name, deps) {
-            calls.push({ name, deps });
+        ProjectManager.createProject = async function(name, deps, options) {
+            calls.push({ name, deps, options });
             const dir = path.join(rootDir, ProjectManager.getWorkspaceName(name, deps));
             fs.mkdirSync(dir, { recursive: true });
             fs.writeFileSync(path.join(dir, 'pixi.toml'), '[project]\n');
@@ -126,6 +126,8 @@ describe('python-workspace node', function() {
             expect(calls).to.have.lengthOf(1);
             expect(calls[0].name).to.equal('My Env');
             expect(calls[0].deps).to.deep.equal(['python=3.12', 'numpy']);
+            // the node id is passed so createProject can rename the folder on rename
+            expect(calls[0].options).to.deep.equal({ nodeId: 'node-abc' });
             expect(node.projectDir).to.equal(path.join(rootDir, 'My-Env'));
             expect(node.isValid()).to.be.true;
 
@@ -154,6 +156,103 @@ describe('python-workspace node', function() {
             expect(calls).to.have.lengthOf(0);
             expect(node.isValid()).to.be.false;
             expect(node.workerStatus).to.equal('error');
+        });
+    });
+
+    describe('worker mode', function() {
+        async function makeReadyNode(config) {
+            stubCreateProject([]);
+            stubWorkerStart();
+            RED = createMockRED({});
+            workspaceNodeModule(RED);
+            const node = new constructors['python-workspace'](Object.assign({
+                id: 'node-mode',
+                name: 'Mode Env',
+                dependencies: 'python=3.13',
+                environment: 'default'
+            }, config));
+            await settle(node);
+            return node;
+        }
+
+        it('should default to auto and pass it to the worker manager', async function() {
+            const node = await makeReadyNode({});
+            expect(node.workerStatus).to.equal('ready');
+            expect(node.workerMode).to.equal('auto');
+            expect(node.workerManager.options.workerMode).to.equal('auto');
+
+            const meta = ProjectManager.readWorkspaceMeta(node.projectDir);
+            expect(meta.workerMode).to.equal('auto');
+        });
+
+        it('should accept an explicit mode, pass it to the worker manager and record it in the metadata', async function() {
+            const node = await makeReadyNode({ workerMode: 'sequential' });
+            expect(node.workerMode).to.equal('sequential');
+            expect(node.workerManager.options.workerMode).to.equal('sequential');
+
+            const meta = ProjectManager.readWorkspaceMeta(node.projectDir);
+            expect(meta.workerMode).to.equal('sequential');
+        });
+
+        it('should fall back to auto for an unknown mode', async function() {
+            const node = await makeReadyNode({ workerMode: 'bogus' });
+            expect(node.workerMode).to.equal('auto');
+            expect(node.workerManager.options.workerMode).to.equal('auto');
+        });
+
+        it('should restore the worker mode when reconciling a workspace into the flow file', function() {
+            const wsDir = path.join(rootDir, 'mode-env');
+            fs.mkdirSync(wsDir, { recursive: true });
+            fs.writeFileSync(path.join(wsDir, 'pixi.toml'), '[project]\n');
+            fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(wsDir), JSON.stringify({
+                id: 'node-mode-old',
+                name: 'mode-env',
+                dependencies: ['python=3.13'],
+                workerMode: 'processes'
+            }));
+
+            const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nr-userdir-'));
+            const flowsPath = path.join(userDir, 'test-flows.json');
+            fs.writeFileSync(flowsPath, JSON.stringify([{ id: 'tab-1', type: 'tab', label: 'Flow 1' }]));
+
+            try {
+                RED = createMockRED({ userDir, flowFile: 'test-flows.json' });
+                workspaceNodeModule(RED);
+
+                const flows = JSON.parse(fs.readFileSync(flowsPath, 'utf8'));
+                const nodes = flows.filter(n => n.type === 'python-workspace');
+                expect(nodes).to.have.lengthOf(1);
+                expect(nodes[0].workerMode).to.equal('processes');
+            } finally {
+                fs.rmSync(userDir, { recursive: true, force: true });
+            }
+        });
+
+        it('should default the restored worker mode to auto when the metadata has none', function() {
+            const wsDir = path.join(rootDir, 'nomode-env');
+            fs.mkdirSync(wsDir, { recursive: true });
+            fs.writeFileSync(path.join(wsDir, 'pixi.toml'), '[project]\n');
+            fs.writeFileSync(ProjectManager.getWorkspaceMetaPath(wsDir), JSON.stringify({
+                id: 'node-nomode-old',
+                name: 'nomode-env',
+                dependencies: ['python=3.13']
+            }));
+
+            const userDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nr-userdir-'));
+            const flowsPath = path.join(userDir, 'test-flows.json');
+            fs.writeFileSync(flowsPath, JSON.stringify([]));
+
+            try {
+                RED = createMockRED({ userDir, flowFile: 'test-flows.json' });
+                workspaceNodeModule(RED);
+
+                const flows = JSON.parse(fs.readFileSync(flowsPath, 'utf8'));
+                const nodes = flows.filter(n => n.type === 'python-workspace');
+                expect(nodes).to.have.lengthOf(1);
+                expect(nodes[0].workerMode).to.equal('auto');
+            } finally {
+                fs.rmSync(userDir, { recursive: true, force: true });
+            }
         });
     });
 

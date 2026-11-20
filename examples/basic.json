@@ -11,8 +11,9 @@
         "id": "comment-1",
         "type": "comment",
         "z": "tab-1",
-        "name": "Python Functions Demo: inject a number, python-function doubles it; inject an array, NumPy averages it; python-run runs a one-liner script. The 'Local Python' workspace (see the configuration sidebar) provides the Python environment.",
-        "x": 780,
+        "name": "Python Functions Demo",
+        "info": " - inject a number, python-function doubles it\n - inject an array, toolz counts words\n - python-run runs a one-liner script. The 'Local Python' workspace (see the configuration sidebar) provides the Python environment.",
+        "x": 120,
         "y": 60,
         "wires": []
     },
@@ -146,7 +147,7 @@
         "id": "debug-2",
         "type": "debug",
         "z": "tab-1",
-        "name": "NumPy Result",
+        "name": "Toolz Result",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -155,7 +156,7 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 510,
+        "x": 500,
         "y": 300,
         "wires": []
     },
@@ -178,7 +179,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "print('Hello from Python!')",
+        "payload": "import sys; print(f'Hello from Python {sys.version}!')",
         "payloadType": "str",
         "x": 110,
         "y": 400,
@@ -211,10 +212,11 @@
         "name": "local-python",
         "dependencies": "python=3.11\ntoolz",
         "environment": "default",
-        "startupTimeout": 120000
+        "startupTimeout": 120000,
+        "workerMode": "sequential"
     },
     {
-        "id": "83b35cbaf029f1ae",
+        "id": "a881f2e91ec6a4a1",
         "type": "global-config",
         "env": [],
         "modules": {

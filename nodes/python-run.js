@@ -25,19 +25,29 @@ module.exports = function(RED) {
         // Node status
         this.nodeStatus = 'initializing';
 
+        // Timer of the waitForWorkspace poll, cleared on close
+        this.workspacePollTimer = null;
+
         // Commands currently running, as {child, timer} records, so close can
         // kill them instead of orphaning child processes
         this.activeProcesses = new Set();
 
-        // Validate configuration
-        if (!this.workspaceNode || !this.workspaceNode.isValid()) {
+        // Validate configuration. The workspace config node is constructed
+        // before this node but sets up its environment asynchronously, so a
+        // not-yet-valid workspace is not an error here: wait for it (like
+        // python-function does) instead of logging an error on every restart.
+        // Only a missing workspace node or a missing command is an error now;
+        // handleInput re-checks the workspace when a message actually arrives.
+        if (!this.workspaceNode) {
             this.error(RED._('python-run.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
             this.nodeStatus = 'error';
+            this.updateStatus();
         } else if (!this.command) {
             this.error(RED._('python-run.errors.noCommand', { defaultValue: 'Command is required' }));
             this.nodeStatus = 'error';
+            this.updateStatus();
         } else {
-            this.nodeStatus = 'ready';
+            this.waitForWorkspace();
         }
 
         // Handle input messages
@@ -51,6 +61,47 @@ module.exports = function(RED) {
             node.cleanup(done);
         });
     }
+
+    /**
+     * Wait for the workspace config node to finish its asynchronous setup,
+     * then mark this node ready. The workspace node may still be initializing
+     * when this node is constructed (config nodes are built first, their setup
+     * resolves later), so poll instead of failing; if the workspace reports
+     * an error, surface it here.
+     */
+    PythonRunNode.prototype.waitForWorkspace = function() {
+        const node = this;
+        const timeoutMs = (node.workspaceNode && node.workspaceNode.startupTimeout) || 120000;
+        const deadline = Date.now() + timeoutMs;
+
+        const check = function() {
+            if (!node.workspaceNode) {
+                node.nodeStatus = 'error';
+                node.error(RED._('python-run.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
+                node.updateStatus();
+                return;
+            }
+            if (node.workspaceNode.isValid() && node.workspaceNode.projectDir) {
+                node.nodeStatus = 'ready';
+                node.updateStatus();
+                return;
+            }
+            if (node.workspaceNode.workerStatus === 'error') {
+                node.nodeStatus = 'error';
+                node.error(RED._('python-run.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
+                node.updateStatus();
+                return;
+            }
+            if (Date.now() < deadline) {
+                node.workspacePollTimer = setTimeout(check, 500);
+            } else {
+                node.nodeStatus = 'error';
+                node.error(RED._('python-run.errors.invalidWorkspace', { defaultValue: 'Invalid Python workspace configuration' }));
+                node.updateStatus();
+            }
+        };
+        check();
+    };
 
     /**
      * Handle input message
@@ -230,6 +281,12 @@ module.exports = function(RED) {
      * @param {Function} [done] - callback when done
      */
     PythonRunNode.prototype.cleanup = function(done) {
+        // Stop polling for the workspace if the node is closed mid-startup
+        if (this.workspacePollTimer) {
+            clearTimeout(this.workspacePollTimer);
+            this.workspacePollTimer = null;
+        }
+
         // Kill commands still running so no child process is left orphaned
         // when the node is closed (redeploy or deletion)
         for (const record of this.activeProcesses) {

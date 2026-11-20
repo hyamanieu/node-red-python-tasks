@@ -274,6 +274,13 @@ class Worker:
         function on the pool. Threads when free-threaded; with the GIL
         active the call crosses to a pool process together with the
         function source, because exec'd functions cannot be pickled."""
+        # Fail-safe: sequential mode has no pool (self.executor is None), so
+        # never touch it — run the request inline instead. dispatch() already
+        # routes sequential calls away from here, but do not rely on that alone.
+        if self.mode == "sequential" or self.executor is None:
+            self._run_request(request)
+            return
+
         request_id = request.get("id")
         function_id = request.get("function_id")
 

@@ -167,6 +167,24 @@ describe('python worker execution modes', function() {
         expect(result.process).to.match(/^SpawnProcess-\d+$/);
     });
 
+    it('fail-safe: submit_call runs inline in sequential mode even when called directly, bypassing dispatch', function() {
+        // The worker in sequential mode has executor=None; dispatch() routes
+        // calls away from submit_call, but submit_call must not crash if it
+        // is reached anyway
+        const fixture = path.join(__dirname, '..', 'fixtures', 'worker_submit_call_failsafe.py');
+        const out = execFileSync('python3', [fixture], {
+            env: Object.assign({}, process.env, { PYTHONPATH: PYTHON_DIR }),
+            encoding: 'utf8',
+            timeout: 30000
+        });
+        const messages = out.trim().split('\n').map(l => JSON.parse(l));
+        const def = messages.find(m => m.id === 'd1');
+        const call = messages.find(m => m.id === 'c1');
+        expect(def && def.ok, out).to.be.true;
+        expect(call && call.ok, out).to.be.true;
+        expect(call.result.thread).to.equal('MainThread');
+    });
+
     it('auto mode picks a pool mode from the interpreter (threads on no-GIL, processes on GIL)', async function() {
         const worker = startWorker(null); // no NRPYRUN_WORKER_MODE
         const ready = await worker.waitFor(m => m.op === 'ready');

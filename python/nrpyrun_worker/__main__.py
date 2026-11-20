@@ -27,9 +27,15 @@ the pool entry point lives in nrpyrun_worker._pool so spawn children can
 import it by name. Payloads and results cross the process boundary by
 pickle and must be picklable; responses are still JSON-lines, as before.
 
+In "sequential" mode there is no pool at all: every request, including
+"call", runs inline on the reader thread. That gives the lowest latency
+and strict request ordering, and all calls share one interpreter's state,
+but a single slow call blocks every request behind it (including pings).
+
 Pool size: NRPYRUN_WORKER_MAX_THREADS / NRPYRUN_WORKER_MAX_PROCESSES
 (defaults: min(32, cpu+4) threads, cpu_count processes).
-NRPYRUN_WORKER_MODE=threads|processes forces a mode (default: auto).
+NRPYRUN_WORKER_MODE=threads|processes|sequential forces a mode
+(default: auto = threads on free-threaded builds, processes otherwise).
 """
 
 import json
@@ -61,15 +67,18 @@ def _is_free_threaded() -> bool:
 
 def _resolve_mode() -> str:
     """Execution mode: "threads" on free-threaded builds, "processes" when
-    the GIL is active. NRPYRUN_WORKER_MODE=threads|processes forces it."""
+    the GIL is active, "sequential" to run every request inline on the
+    reader thread. NRPYRUN_WORKER_MODE=threads|processes|sequential forces it."""
     forced = os.environ.get("NRPYRUN_WORKER_MODE", "").strip().lower()
-    if forced in ("threads", "processes"):
+    if forced in ("threads", "processes", "sequential"):
         return forced
     return "threads" if _is_free_threaded() else "processes"
 
 
 def _pool_size_from_env(mode: str) -> Optional[int]:
     """Pool size for the given mode from the environment, or the default."""
+    if mode not in ("threads", "processes"):
+        return None  # sequential mode has no pool
     if mode == "processes":
         raw = os.environ.get("NRPYRUN_WORKER_MAX_PROCESSES")
         if raw:
@@ -107,21 +116,25 @@ class Worker:
         self.running = True
         self.free_threaded = _is_free_threaded()
         self.mode = _resolve_mode()
-        if max_workers is None:
-            max_workers = _pool_size_from_env(self.mode)
-        # "call" requests run here, in parallel; everything else runs on
-        # the reader thread (see dispatch). Threads when the interpreter is
-        # free-threaded, separate processes when the GIL is active.
-        if self.mode == "processes":
-            self.executor = ProcessPoolExecutor(
-                max_workers=max_workers,
-                mp_context=multiprocessing.get_context("spawn")
-            )
+        if self.mode == "sequential":
+            # No pool: every request runs inline on the reader thread
+            self.executor = None
         else:
-            self.executor = ThreadPoolExecutor(
-                max_workers=max_workers,
-                thread_name_prefix="nrpyrun-call"
-            )
+            if max_workers is None:
+                max_workers = _pool_size_from_env(self.mode)
+            # "call" requests run here, in parallel; everything else runs on
+            # the reader thread (see dispatch). Threads when the interpreter is
+            # free-threaded, separate processes when the GIL is active.
+            if self.mode == "processes":
+                self.executor = ProcessPoolExecutor(
+                    max_workers=max_workers,
+                    mp_context=multiprocessing.get_context("spawn")
+                )
+            else:
+                self.executor = ThreadPoolExecutor(
+                    max_workers=max_workers,
+                    thread_name_prefix="nrpyrun-call"
+                )
 
     def send_message(self, message: Dict[str, Any]) -> None:
         """Send a JSON message to stdout. Safe to call from pool threads."""
@@ -248,9 +261,10 @@ class Worker:
 
     def dispatch(self, request: Dict[str, Any]) -> None:
         """Route a request: "call" goes to the execution pool so payloads
-        are processed in parallel; the rest run on the reader thread so
+        are processed in parallel (in sequential mode there is no pool and
+        the call runs inline); the rest run on the reader thread so
         define/ping keep their ordering in the input stream."""
-        if request.get("op") == "call":
+        if request.get("op") == "call" and self.mode != "sequential":
             self.submit_call(request)
         else:
             self._run_request(request)
@@ -349,8 +363,9 @@ class Worker:
                 sys.stderr.write(f"Error dispatching request: {e}\n")
 
         # stdin closed: wait for in-flight calls so their responses are
-        # written before the process exits
-        self.executor.shutdown(wait=True)
+        # written before the process exits (no pool in sequential mode)
+        if self.executor is not None:
+            self.executor.shutdown(wait=True)
 
     def stop(self) -> None:
         """Stop the worker."""

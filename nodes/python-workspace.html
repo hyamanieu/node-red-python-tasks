@@ -8,7 +8,8 @@
             name: {value: '', required: true},
             dependencies: {value: '', required: true},
             environment: {value: 'default'},
-            startupTimeout: {value: 120000, validate:RED.validators.number() }
+            startupTimeout: {value: 120000, validate:RED.validators.number() },
+            workerMode: {value: 'auto'}
         },
         icon: "font-awesome/fa-cog",
         label: function() {
@@ -33,8 +34,8 @@
     </div>
     <div class="form-row">
         <label for="node-config-input-dependencies"><i class="fa fa-list"></i> Dependencies</label>
-        <textarea id="node-config-input-dependencies" rows="5" style="resize: vertical; width: 100%; box-sizing: border-box;" placeholder="python=3.12&#10;numpy&#10;pandas=2.0"></textarea>
-        <div class="form-tip">Package specifications with optional versions, one per line (e.g., python=3.12, numpy, pandas=2.0)</div>
+        <textarea id="node-config-input-dependencies" rows="5" style="resize: vertical; width: 100%; box-sizing: border-box;" placeholder="python-freethreading=3.15&#10;numpy&#10;pandas=2.0"></textarea>
+        <div class="form-tip">Package specifications with optional versions, one per line (e.g., python-freethreading=3.15, numpy, pandas=2.0)</div>
     </div>
     <div class="form-row">
         <label for="node-config-input-environment"><i class="fa fa-cog"></i> Environment</label>
@@ -46,6 +47,16 @@
         <input type="text" id="node-config-input-startupTimeout" placeholder="120000">
         <div class="form-tip">Time to wait for the Python environment to start (default: 120000ms)</div>
     </div>
+    <div class="form-row">
+        <label for="node-config-input-workerMode"><i class="fa fa-cogs"></i> Worker mode</label>
+        <select id="node-config-input-workerMode">
+            <option value="auto">auto</option>
+            <option value="threads">threads</option>
+            <option value="processes">processes</option>
+            <option value="sequential">sequential</option>
+        </select>
+        <div class="form-tip">How Python functions are executed: auto, threads, processes or sequential (default: auto)</div>
+    </div>
 </script>
 
 <script type="text/html" data-help-name="python-workspace">
@@ -54,6 +65,15 @@
     <p>The environment is stored on the Node-RED host in a folder named after the workspace <b>Name</b>. If Node-RED restarts on a recreated host (for example a container without a persistent flow file), each stored environment is restored as a configuration node automatically. Deleting this configuration node deletes the stored environment for good.</p>
     <p><b>Environment</b> should be left to its default value in most cases.</p>
     <p>The node will internally set up a Python environment with these dependencies and start a worker process to execute Python functions.</p>
+    <p><b>Worker mode</b> selects how incoming calls are executed in the worker process:</p>
+    <ul>
+        <li><b>auto</b> (default): <code>threads</code> on a no-GIL (free-threaded) Python build, <code>processes</code> on a regular GIL build, so CPU-bound functions run in parallel in both cases.</li>
+        <li><b>threads</b>: calls run on a pool of threads inside the worker. Gives real parallelism only on no-GIL builds; with the GIL active, threads take turns, so CPU-bound calls do not speed up, but I/O-bound calls (network, disk, sleeps) still overlap.</li>
+        <li><b>processes</b>: calls run in a pool of separate Python processes. CPU-bound calls run in parallel even with the GIL, at the cost of copying the payload and result between processes, one interpreter per process in memory, and no shared state between calls.</li>
+        <li><b>sequential</b>: every call runs one after another in the worker itself. Lowest latency per call and all calls share the same state, but one slow call blocks all the others.</li>
+    </ul>
+    <p>For best parallel performance, use a no-GIL Python by depending on <code>python-freethreading</code> (e.g. <code>python-freethreading=3.15</code>) instead of <code>python</code>: with <b>auto</b>, such a workspace runs on threads, which parallelize CPU-bound work without the per-call copying of processes.</p>
+    <p><b>Note:</b> in <code>processes</code> mode the message payload and the function result must be picklable to cross into a pool process. Payloads are currently plain JSON, so they always are, but this may change in the future.</p>
     <p><b>Note:</b> This is a configuration node. It will not appear as a node in your flows but can be referenced by python-function and python-run nodes.</p>
-    <p><b>Dependency format:</b> One package per line, optionally with version specifiers. Examples: <code>python=3.9</code>, <code>numpy</code>, <code>pandas&gt;=2.0</code></p>
+    <p><b>Dependency format:</b> One package per line, optionally with version specifiers. Examples: <code>python-freethreading=3.15</code>, <code>numpy</code>, <code>pandas&gt;=2.0</code></p>
 </script>

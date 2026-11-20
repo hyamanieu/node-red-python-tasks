@@ -33,6 +33,11 @@ module.exports = function(RED) {
         this.dependencies = config.dependencies || '';
         this.environment = config.environment || 'default';
         this.startupTimeout = parseInt(config.startupTimeout) || 120000;
+        // How the worker executes calls: 'auto' lets the worker choose from
+        // the interpreter (threads on no-GIL builds, processes on GIL builds)
+        this.workerMode = ['auto', 'threads', 'processes', 'sequential'].includes(config.workerMode)
+            ? config.workerMode
+            : 'auto';
         
         // Internal: the generated project directory
         this.projectDir = null;
@@ -97,7 +102,8 @@ module.exports = function(RED) {
                 name: this.name,
                 dependencies: deps,
                 environment: this.environment,
-                startupTimeout: this.startupTimeout
+                startupTimeout: this.startupTimeout,
+                workerMode: this.workerMode
             });
             if (this.removed) {
                 // The node was deleted while the workspace was being created:
@@ -147,7 +153,8 @@ module.exports = function(RED) {
         this.workerManager = new WorkerManager({
             projectDir: this.projectDir,
             environment: this.environment,
-            startupTimeout: this.startupTimeout
+            startupTimeout: this.startupTimeout,
+            workerMode: this.workerMode
         });
 
         // Set up worker event listeners

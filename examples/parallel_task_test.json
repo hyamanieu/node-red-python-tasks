@@ -1,0 +1,335 @@
+[
+    {
+        "id": "0f6e7beb9ea06ca4",
+        "type": "tab",
+        "label": "Parallel task test",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "7d8a2a5f93dc85b2",
+        "type": "inject",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "[1..16].[{\"ts\":$millis(),\"sleep\": 1}]",
+        "payloadType": "jsonata",
+        "x": 165,
+        "y": 300,
+        "wires": [
+            [
+                "36bf7a9b2779f858",
+                "da52ac877894ec43"
+            ]
+        ],
+        "l": false
+    },
+    {
+        "id": "36bf7a9b2779f858",
+        "type": "split",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "",
+        "property": "payload",
+        "x": 290,
+        "y": 220,
+        "wires": [
+            [
+                "f843ddf7ec03e8f3"
+            ]
+        ]
+    },
+    {
+        "id": "f843ddf7ec03e8f3",
+        "type": "python-function",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "no-GIL 3.14",
+        "workspace": "3051f900f1c0a711",
+        "functionBody": "duration = payload[0]['sleep']\nstart = time.perf_counter()\nit=0\nwhile time.perf_counter() - start < duration:\n    x = 12345 * 67890\n    it += 1\nreturn {\"duration\": payload[0]['ts'], \"py_version\": sysconfig.get_config_var(\"Py_GIL_DISABLED\"), \"iterations\":it}",
+        "imports": "time, sys, sysconfig",
+        "timeout": 30000,
+        "x": 430,
+        "y": 160,
+        "wires": [
+            [
+                "2a55a9a12f725995"
+            ]
+        ]
+    },
+    {
+        "id": "62b01d44b7e22d07",
+        "type": "join",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "mode": "reduce",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": true,
+        "timeout": "",
+        "count": "",
+        "reduceRight": false,
+        "reduceExp": "$A + (payload.iterations/payload.duration)",
+        "reduceInit": "0",
+        "reduceInitType": "num",
+        "reduceFixup": "$A/$N",
+        "x": 670,
+        "y": 160,
+        "wires": [
+            [
+                "209526c70ba8ab0e"
+            ]
+        ]
+    },
+    {
+        "id": "c54def9d69d3a666",
+        "type": "debug",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "no-GIL py3.14",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 880,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "2a55a9a12f725995",
+        "type": "change",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\t   \"duration\": $millis() - payload.duration,\t   \"iterations\": payload.iterations\t}",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 560,
+        "y": 220,
+        "wires": [
+            [
+                "62b01d44b7e22d07"
+            ]
+        ]
+    },
+    {
+        "id": "209526c70ba8ab0e",
+        "type": "change",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "topic",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "no-GIL py314",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 770,
+        "y": 220,
+        "wires": [
+            [
+                "c54def9d69d3a666"
+            ]
+        ]
+    },
+    {
+        "id": "da52ac877894ec43",
+        "type": "split",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "",
+        "property": "payload",
+        "x": 290,
+        "y": 400,
+        "wires": [
+            [
+                "58cc21d4292a5961"
+            ]
+        ]
+    },
+    {
+        "id": "58cc21d4292a5961",
+        "type": "python-function",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "GIL 3.14",
+        "workspace": "4d257f206ab387f3",
+        "functionBody": "duration = payload[0]['sleep']\nstart = time.perf_counter()\nit=0\nwhile time.perf_counter() - start < duration:\n    x = 12345 * 67890\n    it += 1\nreturn {\"duration\": payload[0]['ts'], \"py_version\": sysconfig.get_config_var(\"Py_GIL_DISABLED\"), \"iterations\":it}",
+        "imports": "time, sys, sysconfig",
+        "timeout": 30000,
+        "x": 420,
+        "y": 340,
+        "wires": [
+            [
+                "592d0b9db3c94039"
+            ]
+        ]
+    },
+    {
+        "id": "d76d9f5cae04c125",
+        "type": "join",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "mode": "reduce",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": true,
+        "timeout": "",
+        "count": "",
+        "reduceRight": false,
+        "reduceExp": "$A + (payload.iterations/payload.duration)",
+        "reduceInit": "0",
+        "reduceInitType": "num",
+        "reduceFixup": "$A/$N",
+        "x": 670,
+        "y": 340,
+        "wires": [
+            [
+                "69afc7c9a0fa57ac"
+            ]
+        ]
+    },
+    {
+        "id": "a1ee42cb229d0721",
+        "type": "debug",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "GIL py3.13",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 870,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "592d0b9db3c94039",
+        "type": "change",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\t   \"duration\": $millis() - payload.duration,\t   \"iterations\": payload.iterations\t}",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 560,
+        "y": 400,
+        "wires": [
+            [
+                "d76d9f5cae04c125"
+            ]
+        ]
+    },
+    {
+        "id": "69afc7c9a0fa57ac",
+        "type": "change",
+        "z": "0f6e7beb9ea06ca4",
+        "name": "topic",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "GIL py313",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 770,
+        "y": 400,
+        "wires": [
+            [
+                "a1ee42cb229d0721"
+            ]
+        ]
+    },
+    {
+        "id": "3051f900f1c0a711",
+        "type": "python-workspace",
+        "name": "py314",
+        "dependencies": "python-freethreading=3.14",
+        "environment": "default",
+        "startupTimeout": 120000
+    },
+    {
+        "id": "4d257f206ab387f3",
+        "type": "python-workspace",
+        "name": "py313",
+        "dependencies": "python=3.13",
+        "environment": "default",
+        "startupTimeout": 120000
+    },
+    {
+        "id": "22eefe0c8ebf108d",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@hyamanieu/node-red-python-tasks": "0.1.0"
+        }
+    }
+]

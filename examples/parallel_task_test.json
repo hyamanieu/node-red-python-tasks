@@ -470,7 +470,8 @@
         "name": "py314",
         "dependencies": "python-freethreading=3.14",
         "environment": "default",
-        "startupTimeout": 120000
+        "startupTimeout": 120000,
+        "workerMode": "auto"
     },
     {
         "id": "4d257f206ab387f3",
@@ -478,10 +479,11 @@
         "name": "py313",
         "dependencies": "python=3.13",
         "environment": "default",
-        "startupTimeout": 120000
+        "startupTimeout": 120000,
+        "workerMode": "auto"
     },
     {
-        "id": "9fc95b604a92a2b8",
+        "id": "7ad795b230d5e0d0",
         "type": "global-config",
         "env": [],
         "modules": {

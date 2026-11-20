@@ -92,11 +92,11 @@ Implementation instructions: [docs/agent/MVP.md](./docs/agent/MVP.md).
 
 Driven by whatever Phase 1 users complain about first. Candidates, in rough priority order:
 
+- Multiple worker processes per environment for CPU-bound parallelism (resolves the MVP's
+  concurrency limitation where one worker processes requests strictly sequentially).
 - **Direct TOML editing**: Text field in node UI for writing complete pixi.toml content, for users
   who prefer direct control over their environment definition.
 - Optional input/output schemas, validated at the boundary and surfaced in the editor.
-- Multiple worker processes per environment for CPU-bound parallelism (resolves the MVP's
-  concurrency limitation where one worker processes requests strictly sequentially).
 - Streaming and generator support: one input message producing many output messages.
 - Efficient handling of non-JSON payloads (arrays, dataframes, bytes) without a JSON round-trip.
 

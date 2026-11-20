@@ -125,10 +125,11 @@ cd ~/.node-red
 npm install @hyamanieu/node-red-python-tasks
 ```
 
-[pixi](https://pixi.sh/latest/#installation) must be available on the host (or inside the container
-running Node-RED). It is a single static binary with no dependencies of its own, and installing this
-package with npm installs it automatically; if you copy the files by hand instead, install pixi
-yourself.
+[pixi](https://pixi.sh/latest/#installation) will be installed automatically on the host (or inside the container
+running Node-RED). It is a single static binary with no dependencies of its own. 
+If you copy the files by hand instead, install pixi yourself.
+
+*note:* if you are running Node-RED on its base docker image, Alpine is used. Compatibility with glibc not ideal: installing python >= 3.14 or using libraries with c-compiled code like `numpy` will fail.
 
 ## Developer setup
 
@@ -143,13 +144,6 @@ The package is installed in development mode. Changes to files in `nodes/`, `lib
 via the menu or `docker compose restart node-red`).
 
 To stop: `docker compose down`.
-
-The default image runs on Alpine Linux. Importing `numpy` or other libraries requiring c-compiled code requires another image based on Debian. You may try it and access it on port 1881 by using debian.Dockerfile:
-
-```bash
-docker build -f debian.Dockerfile -t node-red-python-tasks:debian .
-docker run --rm -d --name node-red-debian -p 1881:1880   -v nr-debian-data:/data   -v "$PWD:/data/node-red-node-red-python-tasks"   node-red-python-tasks:debian
-```
 
 ## Examples
 
